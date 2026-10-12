@@ -29,7 +29,7 @@ let lastBonus = 0;
 let timebarTimer = 0; // むずかしい：問題を出した時刻（タイムボーナス用）
 const difficulty = () => (DIFFICULTIES[store.settings.difficulty] ? store.settings.difficulty : 'normal');
 // 「全時代を統べる神」モード：全単元から20問（単元一覧の最後に置く）
-const MIX = { id: 'mix', title: '全時代を統べる神', era: '全4単元から ランダムに20問', festival: '全時代まつり', mix: true };
+const MIX = { id: 'mix', title: '全時代を統べる神', era: '全単元から ランダムに20問', festival: '全時代まつり', mix: true };
 let session = [];
 let qIndex = 0;
 let run = newRun();
@@ -86,6 +86,7 @@ function renderTitle() {
   const list = $('unit-list');
   list.replaceChildren();
   const lastId = store.lastUnit;
+  MIX.era = `全${units.length}単元から ランダムに20問`; // 単元を足しても数が合うように（13回目）
   [...units, MIX].forEach((u, i) => {
     const item = el('div', 'unit-item');
     const b = el('button', 'unit-btn');

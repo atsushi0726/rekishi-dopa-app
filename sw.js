@@ -2,7 +2,7 @@
 // app/ の中のファイルだけをキャッシュする。外部（ほかのサイト）へのリクエストには一切さわらない。
 // ファイルを足したら ASSETS に足し、内容を変えて公開するときは VERSION を上げる（tests/pwa.test.js で検査）。
 
-const VERSION = 'v9';
+const VERSION = 'v10';
 const CACHE = `rekishi-dopa-${VERSION}`;
 
 const ASSETS = [
@@ -23,6 +23,7 @@ const ASSETS = [
   './data/edo.json',
   './data/meiji.json',
   './data/rikken.json',
+  './data/nisshin.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-maskable-512.png',
