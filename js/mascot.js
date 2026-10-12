@@ -1,6 +1,7 @@
 // オリジナルマスコット「まきまる」（仮名）：巻物の妖精。SVG を自作（5回目に描き直し）
 // 表情（mood）は #mascot の data-mood で切り替える：normal / happy / combo / oops / festival
 // 着せ替え（outfit）は data-outfit で切り替える：none / chonmage / jingasa / eboshi / hakase / kabuto
+// 進化（12回目）は data-evo（0〜6）で切り替える。色・かざり・光の輪だけを変え、大きさと形は変えない（着せ替えはどの段階にも重なる）
 export const MASCOT_NAME = 'まきまる';
 
 export const MOODS = ['normal', 'happy', 'combo', 'oops', 'festival'];
@@ -11,8 +12,13 @@ export function mascotSVG() {
   return `
 <svg viewBox="0 0 160 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${MASCOT_NAME}">
   <ellipse class="m-shadow" cx="80" cy="182" rx="40" ry="6" fill="#000" opacity=".22"/>
+  <!-- 進化：光の輪（段階5〜）。からだの後ろ -->
+  <g class="m-evo m-evo-aura">
+    <ellipse cx="80" cy="104" rx="74" ry="82" fill="none" stroke="#ffd34d" stroke-width="14" opacity=".22"/>
+    <ellipse cx="80" cy="104" rx="74" ry="82" fill="none" stroke="#ffd34d" stroke-width="3.5" opacity=".9"/>
+    <ellipse class="m-evo-aura2" cx="80" cy="104" rx="64" ry="72" fill="none" stroke="#fff0a0" stroke-width="2.5" stroke-dasharray="6 6" opacity=".9"/>
+  </g>
   <g class="m-body">
-    <!-- マント（着せ替え：はかせぼうのとき後ろに） -->
     <!-- 足 -->
     <ellipse cx="60" cy="170" rx="13" ry="8" fill="#8a4b25" stroke="${INK}" stroke-width="3"/>
     <ellipse cx="100" cy="170" rx="13" ry="8" fill="#8a4b25" stroke="${INK}" stroke-width="3"/>
@@ -21,17 +27,27 @@ export function mascotSVG() {
     <g class="m-arm m-arm-r"><path d="M126 112 q18 -2 24 -18" stroke="${INK}" stroke-width="9" fill="none" stroke-linecap="round"/><path d="M126 112 q18 -2 24 -18" stroke="#fff3d2" stroke-width="4" fill="none" stroke-linecap="round"/></g>
     <!-- からだ（巻物の紙） -->
     <rect x="30" y="50" width="100" height="118" rx="44" fill="#fff6dc" stroke="${INK}" stroke-width="4"/>
-    <path d="M44 150 q36 10 72 0" stroke="#ecd9a8" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <path d="M52 138 h56" stroke="#ecd9a8" stroke-width="3" stroke-linecap="round"/>
+    <g class="m-lines">
+      <path d="M44 150 q36 10 72 0" stroke="#ecd9a8" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M52 138 h56" stroke="#ecd9a8" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <!-- 進化：にしきのふち（段階4〜） -->
+    <rect class="m-evo m-evo-nishiki" x="37" y="57" width="86" height="104" rx="37" fill="none" stroke="#d9a21b" stroke-width="3" stroke-dasharray="7 5"/>
+    <!-- 進化：花のもんよう（段階2〜） -->
+    <g class="m-evo m-evo-crest" transform="translate(80 146)">
+      <circle cx="0" cy="-7" r="5" fill="#ff9fb4"/><circle cx="6.7" cy="-2.2" r="5" fill="#ff9fb4"/>
+      <circle cx="4.1" cy="5.7" r="5" fill="#ff9fb4"/><circle cx="-4.1" cy="5.7" r="5" fill="#ff9fb4"/>
+      <circle cx="-6.7" cy="-2.2" r="5" fill="#ff9fb4"/><circle cx="0" cy="0" r="3.2" fill="#f6c14d"/>
+    </g>
     <!-- 上の軸（頭） -->
-    <rect x="22" y="36" width="116" height="22" rx="11" fill="#b5652f" stroke="${INK}" stroke-width="4"/>
-    <path d="M30 42 h100" stroke="#d98a4e" stroke-width="3" stroke-linecap="round"/>
+    <rect class="m-jiku" x="22" y="36" width="116" height="22" rx="11" fill="#b5652f" stroke="${INK}" stroke-width="4"/>
+    <path class="m-jiku-hl" d="M30 42 h100" stroke="#d98a4e" stroke-width="3" stroke-linecap="round"/>
     <circle cx="22" cy="47" r="13" fill="#f6c14d" stroke="${INK}" stroke-width="4"/>
     <circle cx="138" cy="47" r="13" fill="#f6c14d" stroke="${INK}" stroke-width="4"/>
     <circle cx="18" cy="43" r="4" fill="#fff" opacity=".7"/><circle cx="134" cy="43" r="4" fill="#fff" opacity=".7"/>
     <!-- 赤いひも -->
-    <path d="M138 60 q6 14 -2 26" stroke="#e63946" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <circle cx="136" cy="88" r="5" fill="#e63946" stroke="${INK}" stroke-width="2"/>
+    <path class="m-himo" d="M138 60 q6 14 -2 26" stroke="#e63946" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <circle class="m-himo-dot" cx="136" cy="88" r="5" fill="#e63946" stroke="${INK}" stroke-width="2"/>
 
     <!-- ほっぺ -->
     <ellipse cx="50" cy="112" rx="10" ry="6" fill="#ff8fa3" opacity=".75"/>
@@ -93,6 +109,13 @@ export function mascotSVG() {
       <path d="M31 70 q49 -10 98 0 v11 q-49 -10 -98 0z" fill="#e63946" stroke="${INK}" stroke-width="3"/>
       <path d="M128 74 l18 -10 M128 77 l20 4" stroke="#e63946" stroke-width="7" stroke-linecap="round"/>
       <circle cx="80" cy="70" r="5" fill="#fff"/>
+    </g>
+
+    <!-- 進化：まわりの星（段階6） -->
+    <g class="m-evo m-evo-stars" fill="#ffd34d" stroke="${INK}" stroke-width="1.5">
+      <path d="M6 128 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
+      <path d="M152 150 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
+      <path d="M150 20 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
     </g>
 
     <!-- 着せ替え -->

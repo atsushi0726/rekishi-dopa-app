@@ -32,12 +32,19 @@ export function load(store, prefersReducedMotion = false) {
       records: data.records && typeof data.records === 'object' ? data.records : {},
       lastUnit: typeof data.lastUnit === 'string' ? data.lastUnit : null,
       weak: cleanWeak(data.weak),
-      stats: data.stats && typeof data.stats === 'object' && !Array.isArray(data.stats) ? data.stats : null,
+      stats: cleanStats(data.stats),
       outfit: typeof data.outfit === 'string' ? data.outfit : 'none',
     };
   } catch {
     return base;
   }
+}
+
+// 累計の記録（遊んだ回数など）。オブジェクトでなければ null、数が壊れていれば 0 にする（12回目：進化の段階に使うため）
+function cleanStats(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+  const n = (x) => (Number.isInteger(x) && x >= 0 ? x : 0);
+  return { plays: n(v.plays), correct: n(v.correct), bestCombo: n(v.bestCombo), perfects: n(v.perfects) };
 }
 
 // にがて問題の記録 { 単元id: [問題id, ...] } を、壊れた値を捨てて読み直す

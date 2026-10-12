@@ -305,6 +305,31 @@ body[data-stage="5"] #mascot .m-hachimaki, body[data-stage="6"] #mascot .m-hachi
 [data-outfit="eboshi"] .m-outfit-eboshi, [data-outfit="hakase"] .m-outfit-hakase,
 [data-outfit="kabuto"] .m-outfit-kabuto { display: inline; }
 
+/* まきまるの進化（12回目・data-evo 0〜6）。色・かざり・光の輪だけを変え、大きさは変えない（右下でボタンに重ならないように） */
+.m-evo { display: none; }
+[data-evo="1"] .m-jiku, [data-evo="2"] .m-jiku { fill: #c8442f; }
+[data-evo="1"] .m-jiku-hl, [data-evo="2"] .m-jiku-hl { stroke: #e8775c; }
+[data-evo="2"] .m-evo-crest, [data-evo="3"] .m-evo-crest, [data-evo="4"] .m-evo-crest,
+[data-evo="5"] .m-evo-crest, [data-evo="6"] .m-evo-crest { display: inline; }
+[data-evo="2"] .m-lines, [data-evo="3"] .m-lines, [data-evo="4"] .m-lines, [data-evo="5"] .m-lines, [data-evo="6"] .m-lines { display: none; }
+[data-evo="3"] .m-jiku, [data-evo="4"] .m-jiku, [data-evo="5"] .m-jiku, [data-evo="6"] .m-jiku { fill: #e0a526; }
+[data-evo="3"] .m-jiku-hl, [data-evo="4"] .m-jiku-hl, [data-evo="5"] .m-jiku-hl, [data-evo="6"] .m-jiku-hl { stroke: #fff0a0; }
+[data-evo="3"] .m-himo, [data-evo="4"] .m-himo, [data-evo="5"] .m-himo, [data-evo="6"] .m-himo { stroke: #7b3fa0; }
+[data-evo="3"] .m-himo-dot, [data-evo="4"] .m-himo-dot, [data-evo="5"] .m-himo-dot, [data-evo="6"] .m-himo-dot { fill: #7b3fa0; }
+[data-evo="4"] .m-evo-nishiki, [data-evo="5"] .m-evo-nishiki, [data-evo="6"] .m-evo-nishiki { display: inline; }
+[data-evo="5"] .m-evo-aura, [data-evo="6"] .m-evo-aura { display: inline; }
+[data-evo="5"] .m-evo-aura2 { display: none; }
+[data-evo="6"] .m-evo-stars { display: inline; }
+/* 進化した瞬間（結果画面）：やさしく光って1回ふくらむ。ひかえめでは動かさない */
+#mascot.evolve { animation: evolve 1.2s ease-out; }
+@keyframes evolve {
+  0% { filter: brightness(1); transform: scale(1); }
+  35% { filter: brightness(1.6) drop-shadow(0 0 12px #ffe680); transform: scale(1.12); }
+  100% { filter: brightness(1); transform: scale(1); }
+}
+.profile-evo { margin: 0; font-weight: 700; font-size: 0.95rem; }
+.profile-evo-next { margin: 2px 0 10px; font-size: 0.85rem; color: var(--muted); }
+
 /* 動き。「ひかえめ」ではすべて止める */
 #mascot.jump { animation: jump 0.5s; }
 #mascot.spin { animation: spin-jump 0.7s; }

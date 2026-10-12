@@ -5,7 +5,7 @@ import {
   moodFor, comboTier, comboShout, rankFor,
   DIFFICULTIES, buildWeightedSession, reduceChoices, hintFor, timeBonus, TIME_LIMIT_MS, recordKey,
 } from './game.js';
-import { OUTFITS, emptyStats, addPlay, unlockedOutfits, newOutfits, titleFor } from './rewards.js';
+import { OUTFITS, emptyStats, addPlay, unlockedOutfits, newOutfits, titleFor, evolutionFor, EVOLUTIONS } from './rewards.js';
 import { validateUnit } from './validate.js';
 import { load, save, mergeRecord, emptyRecord, updateWeak, bestStatus } from './storage.js';
 import { AudioEngine } from './audio.js';
@@ -141,6 +141,11 @@ function renderDifficulty() {
 // 称号と着せ替え。まだのものは条件を出す（押せない）
 function renderProfile() {
   const stats = store.stats || emptyStats();
+  // まきまるの進化（12回目）：遊んだ回数だけで進む
+  const ev = evolutionFor(stats);
+  $('mascot').dataset.evo = String(ev.level);
+  $('profile-evo').textContent = `まきまる：${ev.name}（進化 ${ev.level} / ${EVOLUTIONS.length - 1}）`;
+  $('profile-evo-next').textContent = ev.next ? `次の進化まで あと${ev.next.left}回 遊ぶ（正解数は関係なし）` : 'いちばん上まで進化しました！';
   const t = titleFor(stats);
   $('profile-title').textContent = `称号：${t.name}`;
   $('profile-next').textContent = t.next ? `あと ${t.next.left}問 正解で「${t.next.name}」` : '最高の称号です！';
@@ -709,10 +714,12 @@ function finish() {
   const best = review ? null : bestStatus(prev, run);
   const ownedBefore = unlockedOutfits(store.stats || emptyStats(), store.records);
   const titleBefore = titleFor(store.stats || emptyStats());
+  const evoBefore = evolutionFor(store.stats || emptyStats());
   if (!review) store.records[rkey] = mergeRecord(prev, run);
   store.stats = addPlay(store.stats, run, { total: session.length, review });
   const gotOutfits = newOutfits(ownedBefore, unlockedOutfits(store.stats, store.records));
   const titleAfter = titleFor(store.stats);
+  const evoAfter = evolutionFor(store.stats);
   save(store);
   const weakLeft = unit.mix ? 0 : (store.weak[unit.id] || []).length;
   audio.finish();
@@ -755,6 +762,9 @@ function finish() {
     ul.appendChild(el('li', 'unlock', `NEW！ きせかえ「${OUTFITS.find((o) => o.id === id).name}」をゲット！`));
   }
   if (titleAfter.level > titleBefore.level) ul.appendChild(el('li', 'unlock', `称号アップ！「${titleAfter.name}」`));
+  const evolved = evoAfter.level > evoBefore.level;
+  if (evolved) ul.appendChild(el('li', 'unlock evo', `まきまるが進化！「${evoAfter.name}」（${EVOLUTIONS[evoAfter.level].look}）`));
+  $('mascot').dataset.evo = String(evoAfter.level);
   if (rank === 'S') shout('パーフェクト！', 'tier4');
   setMood(rank === 'C' && run.stage < MAX_STAGE ? 'happy' : 'festival');
   $('btn-again').textContent = review && weakLeft ? 'にがて問題をもう一度' : 'もう一度';
@@ -765,7 +775,19 @@ function finish() {
   fx.confetti(60);
   if (run.stage >= 5) [0, 300, 600].forEach((d) => setTimeout(() => fx.firework(), d));
   if (best) celebrateBest();
+  if (evolved) celebrateEvolution(evoAfter);
   $('btn-again').focus();
+}
+
+// 進化した瞬間。まきまるが光って1回ふくらみ、紙吹雪。知らせの文は結果の一覧に出す
+// （吹き出しは一覧の文に重なって読みにくいので使わない）。
+// ひかえめ（data-motion=low）では動かさず（CSS で止まる）、紙吹雪を少しだけ。揺れ・フラッシュは使わない
+function celebrateEvolution(ev) {
+  setTimeout(() => {
+    restartAnim($('mascot'), 'evolve', 1300);
+    fx.confetti(store.settings.motion === 'low' ? 15 : 40, fx.w - 60, fx.h - 120);
+    $('live').textContent = `まきまるが進化しました。${ev.name}`;
+  }, 900);
 }
 
 // ベスト更新の特別演出。音はミュートに、動きは「動きの強さ」に従う

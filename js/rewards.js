@@ -46,6 +46,27 @@ export function newOutfits(before, after) {
   return after.filter((id) => !was.has(id));
 }
 
+// まきまるの進化（12回目）。遊んだ回数（結果画面まで行ったプレイ。にがて問題・全時代も数える）だけで決まり、
+// 正解数には関係しない。最初の進化は2回目で来る。見た目は data-evo（0〜6）で切り替える（style.css）
+export const EVOLUTIONS = [
+  { min: 0, name: 'はじまりのまきまる', look: 'もとの姿' },
+  { min: 2, name: '朱ぬりのまきまる', look: '上の軸が朱色に' },
+  { min: 5, name: '花もんのまきまる', look: 'からだに花のもんよう' },
+  { min: 10, name: '金じくのまきまる', look: '軸が金色に・ひもがむらさきに' },
+  { min: 20, name: 'にしきのまきまる', look: 'からだのふちに にしきのかざり' },
+  { min: 35, name: '光のまきまる', look: '後ろに光の輪' },
+  { min: 50, name: '伝説のまきまる', look: '光の輪が二重に・星がまわりに' },
+];
+
+// 遊んだ回数から進化の段階。next は次の進化までのこり回数（最後の段階なら null）
+export function evolutionFor(stats) {
+  const p = stats && Number.isInteger(stats.plays) && stats.plays > 0 ? stats.plays : 0;
+  let level = 0;
+  for (let k = 0; k < EVOLUTIONS.length; k++) if (p >= EVOLUTIONS[k].min) level = k;
+  const next = EVOLUTIONS[level + 1];
+  return { level, name: EVOLUTIONS[level].name, next: next ? { name: next.name, left: next.min - p } : null };
+}
+
 export const TITLES = [
   { min: 0, name: '歴史たんけん見習い' },
   { min: 30, name: '歴史たんけん隊' },

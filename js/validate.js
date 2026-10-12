@@ -15,7 +15,8 @@ export function validateQuestion(q) {
   if (!nonEmptyString(q.id)) e('id がない');
   if (!nonEmptyString(q.prompt)) e('prompt がない');
   if (!nonEmptyString(q.explanation)) e('explanation がない');
-  else if (q.explanation.length > 120) e('explanation が長すぎる（120字まで）');
+  // 12回目：まちがえたときに読まれやすいよう、解説は60字まで（「超簡単な説明」）
+  else if (q.explanation.length > 60) e('explanation が長すぎる（60字まで）');
   if (!CHECK_VALUES.includes(q.check)) e(`check は ${CHECK_VALUES.join(' / ')} のどちらか`);
   if (!IMPORTANCE_VALUES.includes(q.importance)) e(`importance は ${IMPORTANCE_VALUES.join(' / ')} のどれか`);
 
