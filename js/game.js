@@ -306,6 +306,21 @@ export function reduceChoices(q, rng = Math.random) {
   return { ...q, choices: keep.map((i) => q.choices[i]), answer: keep.indexOf(q.answer) };
 }
 
+// リベンジ問題（16回目）：その回でまちがえた問題から、重要度の高い順（A→B→C。同じ重要度ならまちがえた順）に最大3問。
+// 同じ問題は1回だけ。全問正解なら空
+export const REVENGE_MAX = 3;
+export const REVENGE_POINTS = 100; // リベンジに成功した1問の点（ベスト記録の比較には入れない）
+export function pickRevenge(wrong, max = REVENGE_MAX) {
+  const rank = { A: 0, B: 1, C: 2 };
+  const seen = new Set();
+  const uniq = (wrong || []).filter((q) => q && !seen.has(q.id) && seen.add(q.id));
+  return uniq
+    .map((q, i) => ({ q, i }))
+    .sort((a, b) => (rank[a.q.importance] ?? 1) - (rank[b.q.importance] ?? 1) || a.i - b.i)
+    .slice(0, max)
+    .map((x) => x.q);
+}
+
 // 難易度に合わせた20問（main.js とテストで同じ選び方を使う）
 export function sessionFor(questions, difficulty = 'normal', rng = Math.random, n = SESSION_LENGTH) {
   const d = DIFFICULTIES[difficulty] || DIFFICULTIES.normal;

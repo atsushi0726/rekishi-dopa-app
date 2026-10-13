@@ -3,7 +3,7 @@ import {
   STAGES, MAX_STAGE, SESSION_LENGTH, stageProgress, grade, newRun, applyAnswer, applySelfCheck, SELF_CHECKS,
   buildSession, buildReviewSession, shuffle, shuffleNotIdentity, orderMarks, matchMarks,
   moodFor, comboTier, comboShout, rankFor,
-  DIFFICULTIES, sessionFor, reduceChoices, hintFor, timeBonus, TIME_LIMIT_MS, recordKey,
+  DIFFICULTIES, sessionFor, pickRevenge, REVENGE_POINTS, reduceChoices, hintFor, timeBonus, TIME_LIMIT_MS, recordKey,
 } from './game.js';
 import { OUTFITS, emptyStats, addPlay, unlockedOutfits, newOutfits, titleFor, evolutionFor, EVOLUTIONS } from './rewards.js';
 import { validateUnit } from './validate.js';
@@ -32,6 +32,10 @@ const difficulty = () => (DIFFICULTIES[store.settings.difficulty] ? store.settin
 const MIX = { id: 'mix', title: '全時代を統べる神', era: '全単元から ランダムに20問', festival: '全時代まつり', mix: true };
 let session = [];
 let qIndex = 0;
+// リベンジ問題（16回目）：wrongs＝その回でまちがえた問題、revenge＝20問のあとのリベンジの状態（なければ null）
+let wrongs = [];
+let revenge = null;
+const curQ = () => (revenge ? revenge.list[revenge.i] : session[qIndex]);
 let run = newRun();
 let current = null; // 表示中の問題の状態
 let answered = false;
@@ -161,7 +165,13 @@ function renderProfile() {
     b.type = 'button';
     b.disabled = !has;
     b.setAttribute('aria-pressed', String(store.outfit === o.id));
-    b.append(el('span', 'oc-name', has ? o.name : '？？？'));
+    // 16回目：着せ替えた姿の小さな絵。まだもらっていないものは黒いシルエットで「何がもらえるか」を見せる
+    const icon = el('span', 'oc-icon' + (has ? '' : ' locked'));
+    icon.setAttribute('aria-hidden', 'true');
+    icon.dataset.mood = 'normal';
+    icon.dataset.outfit = o.id;
+    icon.innerHTML = mascotSVG();
+    b.append(icon, el('span', 'oc-name', has ? o.name : '？？？'));
     if (!has) b.append(el('span', 'oc-hint', o.hint));
     b.addEventListener('click', () => {
       store.outfit = o.id;
@@ -184,10 +194,13 @@ const SAY = {
 export const FX_MS = { shout: 1900, stageBand: 2300, scorePop: 1800, say: 2200 };
 let sayTimer = 0;
 let shoutTimer = 0;
+let burstTimer = 0; // 16回目：正解の「溜め」のあとに出す演出のタイマー
+const HITSTOP_MS = 60; // 正解の瞬間の一瞬の溜め（20〜80ms の間）
 const lowMotion = () => store.settings.motion === 'low';
 
 // 「つぎへ」・画面の切り替えで、残っている演出をすぐに消す（つぎの問題に重ねない）
 function clearEffects() {
+  clearTimeout(burstTimer);
   clearTimeout(shoutTimer);
   clearTimeout(sayTimer);
   const s = $('shout');
@@ -262,7 +275,7 @@ async function startUnit(u, reviewMode = false) {
       // にがて問題はもとの単元に記録するので、単元 id を問題に持たせる
       for (const q of data.questions) questions.push({ ...q, unitId: data.unit });
     }
-    unit = { id: u.id, title: u.mix ? u.title : datas[0].title, festival: u.festival || STAGES[MAX_STAGE].name, questions };
+    unit = { id: u.id, mix: !!u.mix, title: u.mix ? u.title : datas[0].title, festival: u.festival || STAGES[MAX_STAGE].name, questions };
   }
   store.lastUnit = u.id;
   save(store);
@@ -276,6 +289,8 @@ async function startUnit(u, reviewMode = false) {
   // かんたん：4択の誤答を1つ減らして3択に
   if (DIFFICULTIES[difficulty()].choices === 3) session = session.map((q) => reduceChoices(q));
   qIndex = 0;
+  wrongs = [];
+  revenge = null;
   run = newRun();
   setStage(0);
   audio.start();
@@ -294,8 +309,9 @@ function stageName(s) {
 }
 
 function updateHud() {
-  $('hud-progress').textContent = `${Math.min(qIndex + 1, session.length)} / ${session.length}`;
-  $('hud-score').textContent = `${run.score}点`;
+  $('hud-progress').textContent = revenge ? `リベンジ ${revenge.i + 1} / ${revenge.list.length}`
+    : `${Math.min(qIndex + 1, session.length)} / ${session.length}`;
+  $('hud-score').textContent = `${run.score + (revenge ? revenge.points : 0)}点`;
   $('meter-fill').style.width = `${Math.round(stageProgress(run.correct, difficulty()) * 100)}%`;
   $('meter-name').textContent = `${run.stage}. ${stageName(run.stage)}`;
   const c = $('hud-combo');
@@ -314,9 +330,9 @@ function optButton(num, text, onClick) {
 
 function renderQuestion() {
   answered = false;
-  const q = session[qIndex];
+  const q = curQ();
   const label = q.type === 'choice' ? `${q.choices.length}択` : TYPE_LABEL[q.type]; // かんたんは「3択」
-  $('qtype').textContent = `第${qIndex + 1}問　${label}`;
+  $('qtype').textContent = revenge ? `リベンジ ${revenge.i + 1}/${revenge.list.length}　${label}` : `第${qIndex + 1}問　${label}`;
   $('prompt').textContent = q.prompt;
   $('feedback').hidden = true;
   $('stamp').classList.remove('on');
@@ -335,7 +351,7 @@ function renderQuestion() {
   $('hint-text').hidden = true;
   $('hint-text').textContent = '';
   // むずかしい：タイムボーナスのバー（時間切れでも失敗にはしない）
-  startTimebar(q.type);
+  startTimebar(revenge ? null : q.type); // リベンジは時間を計らない
   updateHud();
   const first = area.querySelector('.opt:not(:disabled)');
   if (first) first.focus({ preventScroll: true });
@@ -400,7 +416,7 @@ function renderOrder(q, area) {
       const s = el('button', 'slot' + (text ? ' filled' : '') + (!answered && i === current.picked.length ? ' current' : '') + mark);
       s.type = 'button';
       s.disabled = answered || !text;
-      s.append(el('span', 'rank', `${i + 1}番目`), el('span', 'txt', text || ''));
+      s.append(el('span', 'slot-no', `${i + 1}番目`), el('span', 'txt', text || '')); // 16回目：結果のランク札（.rank）とクラス名が重なっていたので変えた
       if (current.marks) s.append(markEl(current.marks[i]));
       s.addEventListener('click', () => {
         current.picked.splice(i, 1);
@@ -561,14 +577,20 @@ function submitAnswer(response) {
   const before = run;
   // 理由・目的の問いは自己採点：できた＝正解、おしい＝正解に数えないがコンボは切らない、まだ＝不正解
   const close = q.type === 'reason' && response === 'close';
-  const res = q.type === 'reason' ? applySelfCheck(run, response, difficulty()) : applyAnswer(run, ok, difficulty());
+  // リベンジ（16回目）は正解数・コンボ・段階を動かさない（「正解 ○/20」とベスト記録の比較は20問のまま）
+  const res = revenge ? { run, gained: 0, stageUp: false }
+    : q.type === 'reason' ? applySelfCheck(run, response, difficulty()) : applyAnswer(run, ok, difficulty());
   // むずかしい：時間内に正解したらタイムボーナス（時間切れでも失敗にはしない）
-  const bonus = ok && DIFFICULTIES[difficulty()].timeBonus ? timeBonus(q.type, performance.now() - qStart) : 0;
+  const bonus = !revenge && ok && DIFFICULTIES[difficulty()].timeBonus ? timeBonus(q.type, performance.now() - qStart) : 0;
   stopTimebar();
   if (bonus) res.run = { ...res.run, score: res.run.score + bonus };
   run = res.run;
   // にがて問題：できた・正解は外し、まだ・不正解は入れる。おしいは今の状態のまま
-  if (!close) store.weak = updateWeak(store.weak, q.unitId || unit.id, q.id, ok);
+  // リベンジでは、にがて問題の記録は変えない（答えを見た直後の正解なので、克服とは数えない。にがて問題モードで確かめる）
+  if (!revenge) {
+    if (!close) store.weak = updateWeak(store.weak, q.unitId || unit.id, q.id, ok);
+    if (!ok) wrongs.push(q);
+  }
   save(store);
 
   // 選択肢の色づけ
@@ -576,13 +598,19 @@ function submitAnswer(response) {
     current.order.forEach((ci, i) => {
       const b = current.buttons[i];
       b.disabled = true;
-      if (ci === q.answer) b.classList.add('correct');
+      if (ci === q.answer) {
+        b.classList.add('correct');
+        if (ok) restartAnim(b, 'charge', 120); // 正解の瞬間の溜め（16回目）
+      }
       else if (ci === response) b.classList.add('wrong');
     });
   } else if (q.type === 'reason') {
     for (const b of current.buttons) {
       b.disabled = true;
-      if (b.dataset.value === response) b.classList.add('picked');
+      if (b.dataset.value === response) {
+        b.classList.add('picked');
+        if (ok) restartAnim(b, 'charge', 120);
+      }
     }
   } else {
     // 並べ替えは枠ごと、組み合わせは行ごと（lefts は pairs と同じ順）に正誤をつける
@@ -591,8 +619,16 @@ function submitAnswer(response) {
   }
   lastGained = res.gained + bonus;
   lastBonus = bonus;
+  if (revenge && ok) {
+    lastGained = REVENGE_POINTS;
+    revenge.points += REVENGE_POINTS;
+    revenge.success++;
+  }
   showFeedback(q, ok, lastGained, response);
-  if (ok) celebrate(res.stageUp, before.stage);
+  if (revenge) {
+    if (ok) celebrateRevenge();
+    else revengeMiss();
+  } else if (ok) celebrate(res.stageUp, before.stage);
   else if (close) almost();
   else oops(before.combo);
   updateHud();
@@ -607,6 +643,10 @@ function showFeedback(q, ok, gained, response) {
     [main, sub] = ok ? ['○ できた！', `+${gained}点`]
       : response === 'close' ? ['△ おしい！', 'コンボはそのまま。要点をもう一度読んでおこう']
         : ['△ まだ', 'にがて問題に入れたよ。つぎいこう'];
+  }
+  if (revenge) {
+    [main, sub] = ok ? ['◎ リベンジ成功！', `+${gained}点`] : ['△ おしい！', '解説を読んで、にがて問題でまた挑戦しよう'];
+    $('combo-burst').hidden = true; // リベンジはコンボに数えない
   }
   v.replaceChildren(el('span', 'v-main', main), el('span', 'v-sub', sub));
   if (ok && lastBonus) v.append(el('span', 'bonus', `（タイムボーナス +${lastBonus}）`));
@@ -634,7 +674,10 @@ function showFeedback(q, ok, gained, response) {
   $('btn-submit').hidden = true;
   const fb = $('feedback');
   fb.hidden = false;
-  $('btn-next').textContent = qIndex + 1 >= session.length ? '結果を見る' : 'つぎへ';
+  const lastMain = !revenge && qIndex + 1 >= session.length;
+  const lastRevenge = revenge && revenge.i + 1 >= revenge.list.length;
+  $('btn-next').textContent = revenge ? (lastRevenge ? '結果を見る' : 'つぎへ')
+    : lastMain ? (!review && wrongs.length ? 'リベンジ問題へ' : '結果を見る') : 'つぎへ';
   $('btn-next').append(el('kbd', '', 'Enter'));
   $('btn-next').focus({ preventScroll: true });
   fb.scrollIntoView({ block: 'nearest', behavior: store.settings.motion === 'low' ? 'auto' : 'smooth' });
@@ -651,16 +694,26 @@ function restartAnim(node, cls, ms) {
 function celebrate(stageUp, prevStage) {
   const s = run.stage;
   setStage(s);
-  audio.correct(run.combo);
   const m = $('mascot');
   const mood = moodFor({ correct: true, combo: run.combo, stage: s });
   setMood(mood);
-  restartAnim(m, mood === 'happy' ? 'jump' : 'spin', 700);
   say(SAY[mood][run.correct % SAY[mood].length]);
-  restartAnim($('card'), 'bump', 350);
   restartAnim($('stamp'), 'on', 100000);
   if (run.combo >= 2) restartAnim($('hud-combo'), 'pop', 350);
   showCombo(run.combo);
+  // 16回目：正解の瞬間に一瞬だけ溜めて（正解の選択肢がぐっとふくらむ）から、音・紙吹雪・大きな文字をはじけさせる。
+  // 演出の量・種類は同じで、出す時刻が 60ms あとになるだけ。ひかえめでは溜めない
+  const burst = () => celebrateBurst(stageUp, prevStage, m, mood);
+  clearTimeout(burstTimer);
+  if (lowMotion()) burst();
+  else burstTimer = setTimeout(burst, HITSTOP_MS);
+}
+
+function celebrateBurst(stageUp, prevStage, m, mood) {
+  const s = run.stage;
+  audio.correct(run.combo);
+  restartAnim(m, mood === 'happy' ? 'jump' : 'spin', 700);
+  restartAnim($('card'), 'bump', 350);
   scorePop(lastGained);
   const sh = comboShout(run.combo);
   // 段階が上がった瞬間はそちらを優先して帯で出す（コンボの文字は帯の1行目に入れる）
@@ -704,9 +757,56 @@ function oops(lostCombo) {
 function next() {
   if (!answered) return;
   clearEffects();
+  if (revenge) {
+    revenge.i++;
+    if (revenge.i >= revenge.list.length) finish();
+    else renderQuestion();
+    return;
+  }
   qIndex++;
-  if (qIndex >= session.length) finish();
-  else renderQuestion();
+  // 20問のあと、まちがえた問題があればリベンジ問題（にがて問題モードは、それ自体がやり直しなので出さない）
+  if (qIndex >= session.length) {
+    if (!review && wrongs.length) startRevenge();
+    else finish();
+  } else renderQuestion();
+}
+
+// リベンジ問題（16回目）：その回でまちがえた問題から、重要度の高い順に最大3問をもう一度
+function startRevenge() {
+  revenge = { list: pickRevenge(wrongs), i: 0, success: 0, points: 0 };
+  renderQuestion();
+  updateHud();
+  shout('リベンジ問題！', 'tier3');
+  say('まちがえた問題に もう一度挑戦！');
+  $('live').textContent = `リベンジ問題 ${revenge.list.length}問`;
+}
+
+// リベンジ成功：派手に（大きな文字・花火・紙吹雪・揺れ）。正解と同じく一瞬溜めてからはじける。ひかえめでは揺れ・花火なし
+function celebrateRevenge() {
+  setMood('combo');
+  say('リベンジ成功！');
+  restartAnim($('stamp'), 'on', 100000);
+  const burst = () => {
+    audio.comboMilestone(10);
+    restartAnim($('mascot'), 'spin', 700);
+    restartAnim($('card'), 'bump', 350);
+    scorePop(lastGained);
+    shout('リベンジ成功！', 'tier4');
+    shake();
+    const rect = $('card').getBoundingClientRect();
+    fx.confetti(lowMotion() ? 20 : 70, rect.left + rect.width / 2, rect.top + 40);
+    if (!lowMotion()) [0, 250, 500].forEach((d) => setTimeout(() => fx.firework(), d));
+  };
+  clearTimeout(burstTimer);
+  if (lowMotion()) burst();
+  else burstTimer = setTimeout(burst, HITSTOP_MS);
+}
+
+function revengeMiss() {
+  audio.wrong();
+  setMood('oops');
+  restartAnim($('mascot'), 'slump', 700);
+  say('だいじょうぶ、にがて問題でまた会おう！');
 }
 
 // ---------- 結果 ----------
@@ -731,10 +831,11 @@ function finish() {
   list.replaceChildren();
   const rows = [
     ['正解', `${run.correct} / ${session.length}問`],
-    ['得点', `${run.score}点`],
+    ['得点', `${run.score + (revenge ? revenge.points : 0)}点`], // リベンジの点も足す（ベスト記録の比較は20問の点）
     ['最大コンボ', `${run.maxCombo}`],
     ['盛り上がり', `${run.stage}. ${stageName(run.stage)}`],
   ];
+  if (revenge) rows.push(['リベンジ', `${revenge.success} / ${revenge.list.length}問 成功（+${revenge.points}点）`]);
   for (const [k, v] of rows) list.append(el('dt', '', k), el('dd', '', v));
   $('result-title').textContent = run.stage === MAX_STAGE ? `${unit.festival}達成！` : 'おつかれさま！';
   // 到達した段階のバッジ
@@ -769,6 +870,18 @@ function finish() {
   const evolved = evoAfter.level > evoBefore.level;
   if (evolved) ul.appendChild(el('li', 'unlock evo', `まきまるが進化！「${evoAfter.name}」（${EVOLUTIONS[evoAfter.level].look}）`));
   $('mascot').dataset.evo = String(evoAfter.level);
+  // 進化の進み具合（16回目）：遊ぶたびに進むゲージ。進化した回はゲージが光る
+  const evoText = evolved
+    ? `まきまるが「${evoAfter.name}」に進化！${evoAfter.next ? `　次の進化まで あと${evoAfter.next.left}回` : ''}`
+    : evoAfter.next ? `「${evoAfter.next.name}」に進化まで あと${evoAfter.next.left}回！` : `「${evoAfter.name}」（いちばん上まで進化）`;
+  $('result-evo-text').textContent = evoText;
+  $('result-evo-fill').style.width = `${Math.round((evoAfter.next ? evoAfter.frac : 1) * 100)}%`;
+  $('result-evo').classList.toggle('just', evolved);
+  // まちがえた問題があった回は、にがて問題をワンタップで（全時代は単元ごとに記録するので出さない）
+  const weakNow = !review && !unit.mix && wrongs.length ? (store.weak[unit.id] || []).length : 0;
+  const rn = $('btn-review-now');
+  rn.hidden = !weakNow;
+  rn.textContent = `にがて問題をすぐやる（${weakNow}問）`;
   if (rank === 'S') shout('パーフェクト！', 'tier4');
   setMood(rank === 'C' && run.stage < MAX_STAGE ? 'happy' : 'festival');
   $('btn-again').textContent = review && weakLeft ? 'にがて問題をもう一度' : 'もう一度';
@@ -813,6 +926,7 @@ $('btn-hint').addEventListener('click', showHint);
 $('btn-next').addEventListener('click', next);
 $('btn-again').addEventListener('click', () => startUnit(units.find((u) => u.id === unit.id), $('btn-again').dataset.review === '1'));
 $('btn-home').addEventListener('click', renderTitle);
+$('btn-review-now').addEventListener('click', () => startUnit(units.find((u) => u.id === unit.id), true));
 $('btn-mute').addEventListener('click', () => {
   store.settings.muted = !store.settings.muted;
   applySettings();

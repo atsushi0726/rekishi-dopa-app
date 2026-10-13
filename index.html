@@ -8,7 +8,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <title>れきしドパ（仮）</title>
+  <title>ドパ・日本史</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body data-stage="0" data-motion="normal">
@@ -19,7 +19,7 @@
   <main id="app">
     <!-- タイトル -->
     <section id="screen-title" class="screen active">
-      <h1 class="logo">れきし<span>ドパ</span><small>（仮）</small></h1>
+      <h1 class="logo"><span>ドパ</span>・日本史</h1>
       <p class="tagline">正解するほど、どんどんお祭り！<br>中学社会・歴史の学習ゲーム</p>
       <section class="difficulty" aria-label="むずかしさ">
         <h2 class="units-head">むずかしさ</h2>
@@ -96,6 +96,12 @@
       <dl class="result-list" id="result-list"></dl>
       <p class="result-best" id="result-best"></p>
       <ul class="result-unlocks" id="result-unlocks"></ul>
+      <!-- 16回目：進化の進み具合（ゲージ）と、まちがえた問題があった回の「にがて問題をすぐやる」 -->
+      <div class="result-evo" id="result-evo">
+        <p class="result-evo-text" id="result-evo-text"></p>
+        <div class="evo-bar" aria-hidden="true"><div class="evo-fill" id="result-evo-fill"></div></div>
+      </div>
+      <button class="btn weak-now" id="btn-review-now" type="button" hidden></button>
       <div class="title-buttons">
         <button class="btn primary" id="btn-again" type="button">もう一度</button>
         <button class="btn" id="btn-home" type="button">タイトルへ</button>

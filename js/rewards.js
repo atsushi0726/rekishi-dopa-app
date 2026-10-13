@@ -64,7 +64,9 @@ export function evolutionFor(stats) {
   let level = 0;
   for (let k = 0; k < EVOLUTIONS.length; k++) if (p >= EVOLUTIONS[k].min) level = k;
   const next = EVOLUTIONS[level + 1];
-  return { level, name: EVOLUTIONS[level].name, next: next ? { name: next.name, left: next.min - p } : null };
+  // frac：今の段階から次の段階までの進み具合（0〜1。結果画面のゲージ用・16回目）
+  const frac = next ? (p - EVOLUTIONS[level].min) / (next.min - EVOLUTIONS[level].min) : 1;
+  return { level, name: EVOLUTIONS[level].name, next: next ? { name: next.name, left: next.min - p } : null, frac };
 }
 
 export const TITLES = [
