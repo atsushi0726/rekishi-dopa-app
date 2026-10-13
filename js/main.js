@@ -7,7 +7,7 @@ import {
 } from './game.js';
 import { OUTFITS, emptyStats, addPlay, unlockedOutfits, newOutfits, titleFor, evolutionFor, EVOLUTIONS } from './rewards.js';
 import { validateUnit } from './validate.js';
-import { load, save, mergeRecord, emptyRecord, updateWeak, bestStatus } from './storage.js';
+import { load, save, mergeRecord, emptyRecord, updateWeak, bestStatus, currentBest, oldBest } from './storage.js';
 import { AudioEngine } from './audio.js';
 import { Effects } from './effects.js';
 import { mascotSVG } from './mascot.js';
@@ -28,11 +28,11 @@ let qStart = 0;
 let lastBonus = 0;
 let timebarTimer = 0; // むずかしい：問題を出した時刻（タイムボーナス用）
 const difficulty = () => (DIFFICULTIES[store.settings.difficulty] ? store.settings.difficulty : 'normal');
-// 「全時代を統べる神」モード：全単元から20問（単元一覧の最後に置く）
-const MIX = { id: 'mix', title: '全時代を統べる神', era: '全単元から ランダムに20問', festival: '全時代まつり', mix: true };
+// 「全時代を統べる神」モード：全単元から1周ぶん（単元一覧の最後に置く）
+const MIX = { id: 'mix', title: '全時代を統べる神', era: `全単元から ランダムに${SESSION_LENGTH}問`, festival: '全時代まつり', mix: true };
 let session = [];
 let qIndex = 0;
-// リベンジ問題（16回目）：wrongs＝その回でまちがえた問題、revenge＝20問のあとのリベンジの状態（なければ null）
+// リベンジ問題（16回目）：wrongs＝その回でまちがえた問題、revenge＝1周（5問）のあとのリベンジの状態（なければ null）
 let wrongs = [];
 let revenge = null;
 let pausedAt = 0; // 17回目：確認を出している間はタイムボーナスの時間を止める
@@ -91,7 +91,7 @@ function renderTitle() {
   const list = $('unit-list');
   list.replaceChildren();
   const lastId = store.lastUnit;
-  MIX.era = `全${units.length}単元から ランダムに20問`; // 単元を足しても数が合うように（13回目）
+  MIX.era = `全${units.length}単元から ランダムに${SESSION_LENGTH}問`; // 単元を足しても数が合うように（13回目）
   [...units, MIX].forEach((u, i) => {
     const item = el('div', 'unit-item');
     const b = el('button', 'unit-btn');
@@ -102,9 +102,13 @@ function renderTitle() {
     b.append(head);
     if (u.era) b.append(el('span', 'unit-era', u.era));
     const rec = store.records[recordKey(u.id, difficulty())];
-    b.append(el('span', 'unit-rec', rec && rec.plays
-      ? `ベスト ${rec.bestScore}点・${rec.bestCorrect}問正解（${rec.plays}回プレイ）`
-      : 'まだ遊んでいません'));
+    // 20回目：ベストは今の1周（5問）の記録だけ。20問のころの記録しかなければ、それとわかるように出す（比べない）
+    const cur = currentBest(rec);
+    const old = oldBest(rec);
+    b.append(el('span', 'unit-rec', cur
+      ? `ベスト ${cur.bestScore}点・${cur.bestCorrect}問正解（${rec.plays}回プレイ）`
+      : old ? `${old.len}問のころのベスト ${old.bestScore}点（${rec.plays}回プレイ）`
+        : 'まだ遊んでいません'));
     b.addEventListener('click', () => startUnit(u));
     item.appendChild(b);
     const weakCount = u.mix ? 0 : (store.weak[u.id] || []).length;
@@ -607,7 +611,7 @@ function submitAnswer(response) {
   const before = run;
   // 理由・目的の問いは自己採点：できた＝正解、おしい＝正解に数えないがコンボは切らない、まだ＝不正解
   const close = q.type === 'reason' && response === 'close';
-  // リベンジ（16回目）は正解数・コンボ・段階を動かさない（「正解 ○/20」とベスト記録の比較は20問のまま）
+  // リベンジ（16回目）は正解数・コンボ・段階を動かさない（「正解 ○/5」とベスト記録の比較は1周の5問のまま）
   const res = revenge ? { run, gained: 0, stageUp: false }
     : q.type === 'reason' ? applySelfCheck(run, response, difficulty()) : applyAnswer(run, ok, difficulty());
   // むずかしい：時間内に正解したらタイムボーナス（時間切れでも失敗にはしない）
@@ -750,9 +754,11 @@ function celebrateBurst(stageUp, prevStage, m, mood) {
   const stageUpNow = stageUp && s > prevStage;
   if (sh && !stageUpNow) shout(sh, `tier${comboTier(run.combo)}`);
   if (sh) {
-    audio.comboMilestone(run.combo);
-    if (run.combo >= 5) shake();
-    if (run.combo >= 10) flash();
+    // 20回目：節目は 2・3・4・5コンボになった。音・揺れ・フラッシュは20問のころの 3・5・10・20コンボと同じ強さで出す
+    const tier = comboTier(run.combo);
+    audio.comboMilestone([0, 3, 5, 10, 20][tier]);
+    if (tier >= 2) shake();
+    if (tier >= 3) flash();
   }
   const rect = $('card').getBoundingClientRect();
   fx.confetti(10 + s * 8, rect.left + rect.width / 2, rect.top + 40);
@@ -781,7 +787,7 @@ function oops(lostCombo) {
   setMood('oops');
   restartAnim($('mascot'), 'slump', 700);
   $('combo-burst').hidden = true;
-  say(lostCombo >= 5 ? `${lostCombo}コンボ、すごかった！ つぎいこう！` : SAY.oops[run.answered % SAY.oops.length]);
+  say(lostCombo >= 3 ? `${lostCombo}コンボ、すごかった！ つぎいこう！` : SAY.oops[run.answered % SAY.oops.length]);
 }
 
 function next() {
@@ -794,14 +800,14 @@ function next() {
     return;
   }
   qIndex++;
-  // 20問のあと、まちがえた問題があればリベンジ問題（にがて問題モードは、それ自体がやり直しなので出さない）
+  // 1周（5問）のあと、まちがえた問題があればリベンジ問題（にがて問題モードは、それ自体がやり直しなので出さない）
   if (qIndex >= session.length) {
     if (!review && wrongs.length) startRevenge();
     else finish();
   } else renderQuestion();
 }
 
-// リベンジ問題（16回目）：その回でまちがえた問題から、重要度の高い順に最大3問をもう一度
+// リベンジ問題（16回目）：その回でまちがえた問題から、重要度の高い順に最大2問（20回目から）をもう一度
 function startRevenge() {
   revenge = { list: pickRevenge(wrongs), i: 0, success: 0, points: 0 };
   renderQuestion();
@@ -861,7 +867,7 @@ function finish() {
   list.replaceChildren();
   const rows = [
     ['正解', `${run.correct} / ${session.length}問`],
-    ['得点', `${run.score + (revenge ? revenge.points : 0)}点`], // リベンジの点も足す（ベスト記録の比較は20問の点）
+    ['得点', `${run.score + (revenge ? revenge.points : 0)}点`], // リベンジの点も足す（ベスト記録の比較は1周の5問の点）
     ['最大コンボ', `${run.maxCombo}`],
     ['盛り上がり', `${run.stage}. ${stageName(run.stage)}`],
   ];

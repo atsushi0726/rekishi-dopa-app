@@ -1,25 +1,29 @@
 // ゲームの中核ロジック（DOM に依存しない純粋関数。tests/ から直接テストする）
 
-export const SESSION_LENGTH = 20;
+// 1周の問題数（20回目に20問から5問へ。篤さん「1周が長い」）
+export const SESSION_LENGTH = 5;
 
 // 盛り上がりの段階。min = その段階に入るのに必要な正解数の累計
+// 20回目：5問で8つの段階を進むため、しきい値は同じ数を2回まで使う（1問の正解で段階が2つ上がることがある）。
+// まつりは 20問のころと同じ正解率（ふつう 16/20＝80% → 4/5）
 export const STAGES = [
   { min: 0, name: 'しずか', bpm: 100 },
   { min: 1, name: 'ひとつ灯る', bpm: 100 },
-  { min: 3, name: 'ざわざわ', bpm: 100 },
-  { min: 5, name: 'ノってきた', bpm: 100 },
-  { min: 7, name: '提灯ともる', bpm: 100 },
-  { min: 10, name: '太鼓どーん', bpm: 112 },
-  { min: 13, name: '大にぎわい', bpm: 122 },
-  { min: 16, name: '大江戸まつり', bpm: 132 },
+  { min: 2, name: 'ざわざわ', bpm: 100 },
+  { min: 2, name: 'ノってきた', bpm: 100 },
+  { min: 3, name: '提灯ともる', bpm: 100 },
+  { min: 3, name: '太鼓どーん', bpm: 112 },
+  { min: 4, name: '大にぎわい', bpm: 122 },
+  { min: 4, name: '大江戸まつり', bpm: 132 },
 ];
 export const MAX_STAGE = STAGES.length - 1;
 
-// 難易度ごとの段階のしきい値（まつりまでの距離）。normal は STAGES の min と同じ
+// 難易度ごとの段階のしきい値（まつりまでの距離）。normal は STAGES の min と同じ。
+// 20回目：かんたん 3問・ふつう 4問・むずかしい 5問（全問正解）の正解でまつり
 export const STAGE_MINS = {
-  easy: [0, 1, 2, 4, 6, 8, 11, 14],
+  easy: [0, 1, 1, 2, 2, 3, 3, 3],
   normal: STAGES.map((s) => s.min),
-  hard: [0, 1, 3, 5, 8, 11, 14, 17],
+  hard: [0, 1, 2, 3, 3, 4, 4, 5],
 };
 
 export function stageFor(correct, difficulty = 'normal') {
@@ -206,17 +210,18 @@ export function moodFor({ answered = true, correct = false, combo = 0, stage = 0
   return combo >= 3 ? 'combo' : 'happy';
 }
 
-// コンボの見た目の段階（0＝出さない、1〜4 でだんだん派手に）
+// コンボの見た目の段階（0＝出さない、1〜4 でだんだん派手に）。
+// 20回目：1周5問なので 2・3・4・5コンボ（5＝1周ぜんぶ正解）で1段ずつ上がる（20問のころは 2・5・10・15）
 export function comboTier(combo) {
-  if (combo >= 15) return 4;
-  if (combo >= 10) return 3;
-  if (combo >= 5) return 2;
+  if (combo >= 5) return 4;
+  if (combo >= 4) return 3;
+  if (combo >= 3) return 2;
   if (combo >= 2) return 1;
   return 0;
 }
 
-// コンボの節目で出す大きな文字（節目でなければ null）
-const COMBO_SHOUTS = { 3: 'いいね！', 5: 'すごい！', 10: '天才！', 15: 'とまらない！', 20: 'パーフェクト！' };
+// コンボの節目で出す大きな文字（節目でなければ null）。20回目：2・3・4・5コンボ（20問のころは 3・5・10・15・20）
+const COMBO_SHOUTS = { 2: 'いいね！', 3: 'すごい！', 4: '天才！', 5: 'パーフェクト！' };
 export function comboShout(combo) {
   return COMBO_SHOUTS[combo] || null;
 }
@@ -248,7 +253,7 @@ export const IMPORTANCE_WEIGHT = { A: 2, B: 1, C: 0.5 };
 
 // 割合から n 問の目安の数を出す（合計がちょうど n になるよう、端数の大きい順に1ずつ足す）
 // 端数は、端数の大きさに比例した確率でくじ引きして配る（10回目）。
-// 端数の大きい順に配ると、問題の少ない形式（例：明治維新の理由・目的 1問＝20問中 0.5問ぶん）が
+// 端数の大きい順に配ると、問題の少ない形式（例：明治維新の理由・目的 1問＝20問中 0.5問ぶん。5問なら 0.13問ぶん）が
 // いつも負けて一度も出なくなるため。平均すると形式の比率どおりになり、1回ごとのずれは ±1問まで
 function quotas(share, n, rng = Math.random) {
   const raw = Object.entries(share).map(([k, w]) => [k, w * n]);
@@ -306,9 +311,9 @@ export function reduceChoices(q, rng = Math.random) {
   return { ...q, choices: keep.map((i) => q.choices[i]), answer: keep.indexOf(q.answer) };
 }
 
-// リベンジ問題（16回目）：その回でまちがえた問題から、重要度の高い順（A→B→C。同じ重要度ならまちがえた順）に最大3問。
-// 同じ問題は1回だけ。全問正解なら空
-export const REVENGE_MAX = 3;
+// リベンジ問題（16回目）：その回でまちがえた問題から、重要度の高い順（A→B→C。同じ重要度ならまちがえた順）に最大2問
+// （20回目に3問から2問へ。1周5問なので、全部まちがえても7問で終わる）。同じ問題は1回だけ。全問正解なら空
+export const REVENGE_MAX = 2;
 export const REVENGE_POINTS = 100; // リベンジに成功した1問の点（ベスト記録の比較には入れない）
 export function pickRevenge(wrong, max = REVENGE_MAX) {
   const rank = { A: 0, B: 1, C: 2 };
@@ -321,7 +326,7 @@ export function pickRevenge(wrong, max = REVENGE_MAX) {
     .map((x) => x.q);
 }
 
-// 難易度に合わせた20問（main.js とテストで同じ選び方を使う）
+// 難易度に合わせた1周ぶん（SESSION_LENGTH 問。main.js とテストで同じ選び方を使う）
 export function sessionFor(questions, difficulty = 'normal', rng = Math.random, n = SESSION_LENGTH) {
   const d = DIFFICULTIES[difficulty] || DIFFICULTIES.normal;
   return buildWeightedSession(questions, n, d.mix, rng, d.typeWeight || null);

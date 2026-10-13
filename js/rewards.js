@@ -1,18 +1,24 @@
 // 集めたくなるごほうび：まきまるの着せ替えと称号（純粋関数、テスト対象）
 // 解放の条件は、端末内に保存した累計の記録（stats）と単元ごとの記録（records）から決める。
+import { SESSION_LENGTH, MAX_STAGE } from './game.js';
 
+// 20回目（1周5問）に festivals・perfect5 を足した。perfects は「20問ぜんぶ正解」の回数（19回目までの記録。もう増えない）
 export function emptyStats() {
-  return { plays: 0, correct: 0, bestCombo: 0, perfects: 0 };
+  return { plays: 0, correct: 0, bestCombo: 0, perfects: 0, festivals: 0, perfect5: 0 };
 }
 
-// 1回のプレイを累計に足す。perfect は 20問ぜんぶ正解（通常モードのみ）
+// 1回のプレイを累計に足す。通常モード（にがて問題モードでない）の1周ぶん（total が SESSION_LENGTH 問）だけ、
+// まつりに届いた回数（festivals）と全問正解の回数（perfect5）を数える
 export function addPlay(stats, run, { total = 0, review = false } = {}) {
   const s = { ...emptyStats(), ...(stats || {}) };
+  const full = !review && total >= SESSION_LENGTH;
   return {
     plays: s.plays + 1,
     correct: s.correct + run.correct,
     bestCombo: Math.max(s.bestCombo, run.maxCombo),
-    perfects: s.perfects + (!review && total >= 20 && run.correct === total ? 1 : 0),
+    perfects: s.perfects,
+    festivals: s.festivals + (full && run.stage >= MAX_STAGE ? 1 : 0),
+    perfect5: s.perfect5 + (full && run.correct === total ? 1 : 0),
   };
 }
 
@@ -29,9 +35,11 @@ export function festivalUnits(records) {
 export const OUTFITS = [
   { id: 'none', name: 'なし', hint: 'はじめから', ok: () => true },
   { id: 'chonmage', name: 'ちょんまげ', hint: '1回 さいごまで遊ぶ', ok: (s) => s.plays >= 1 },
-  { id: 'jingasa', name: 'じんがさ', hint: '10コンボを 出す', ok: (s) => s.bestCombo >= 10 },
+  // 20回目：1周5問では10コンボ・20問ぜんぶ正解に届かないので、何回も遊んで届く条件に変えた。
+  // 20問のころに条件を満たした人（10コンボ・20問パーフェクト）は、もらったまま（後ろの条件）
+  { id: 'jingasa', name: 'じんがさ', hint: 'まつりに 5回 届く', ok: (s) => s.festivals >= 5 || s.bestCombo >= 10 },
   { id: 'eboshi', name: 'えぼし', hint: '5回 遊ぶ', ok: (s) => s.plays >= 5 },
-  { id: 'hakase', name: 'はかせぼう', hint: '20問 ぜんぶ正解（パーフェクト）', ok: (s) => s.perfects >= 1 },
+  { id: 'hakase', name: 'はかせぼう', hint: '5問ぜんぶ正解を 3回', ok: (s) => s.perfect5 >= 3 || s.perfects >= 1 },
   { id: 'kabuto', name: 'きんのかぶと', hint: '2つの単元で まつりに届く', ok: (s, rec) => festivalUnits(rec) >= 2 },
 ];
 
@@ -69,12 +77,14 @@ export function evolutionFor(stats) {
   return { level, name: EVOLUTIONS[level].name, next: next ? { name: next.name, left: next.min - p } : null, frac };
 }
 
+// 20回目：1周5問になり1回で増える正解数が4分の1になったので、しきい値を下げた（30・100・300・700 → 10・30・100・250）。
+// 1回に約4問正解として、最初の称号は3回目ごろ（20問のころは2回目）。下げただけなので、今までの称号が下がることはない
 export const TITLES = [
   { min: 0, name: '歴史たんけん見習い' },
-  { min: 30, name: '歴史たんけん隊' },
-  { min: 100, name: '歴史ものしり' },
-  { min: 300, name: '歴史はかせ' },
-  { min: 700, name: '時をかける名人' },
+  { min: 10, name: '歴史たんけん隊' },
+  { min: 30, name: '歴史ものしり' },
+  { min: 100, name: '歴史はかせ' },
+  { min: 250, name: '時をかける名人' },
 ];
 
 // 累計の正解数から称号。next は次の称号までのこり
