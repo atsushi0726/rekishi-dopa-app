@@ -231,6 +231,10 @@ kbd {
 .verdict { font-size: 1.4rem; font-weight: 800; margin: 0 0 8px; }
 .verdict.ok { color: var(--ok); }
 .verdict.ng { color: var(--ng); }
+/* 15回目：1行目＝判定、2行目＝点数やひとこと */
+.verdict .v-main { display: block; }
+.verdict .v-sub { display: block; font-size: 1.1rem; }
+.verdict.ng .v-sub { font-size: 0.95rem; font-weight: 700; color: #6b5a3e; }
 .solution { font-weight: 700; margin-bottom: 8px; line-height: 1.7; }
 .solution ol { margin: 0; padding-left: 1.4em; }
 .explanation { line-height: 1.7; margin: 0 0 14px; }

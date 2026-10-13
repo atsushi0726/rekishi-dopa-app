@@ -175,7 +175,7 @@ function renderProfile() {
 // ---------- 演出（5回目） ----------
 
 const SAY = {
-  happy: ['やったね！', 'せいかい！', 'いい調子！'],
+  happy: ['やったね！', '正解！', 'いい調子！'],
   combo: ['ノッてきた！', 'とまらない！', 'すごすぎる！'],
   oops: ['ドンマイ！ つぎいこう！', 'おしい！ 解説を読もう', 'だいじょうぶ、まだまだ！'],
   festival: ['わっしょい！', 'まつりだー！', 'さいこう！'],
@@ -601,12 +601,14 @@ function submitAnswer(response) {
 function showFeedback(q, ok, gained, response) {
   const v = $('verdict');
   v.className = 'verdict ' + (ok ? 'ok' : 'ng');
-  v.textContent = ok ? `○ せいかい！ +${gained}点` : '△ おしい！ 勢いはそのまま、つぎいこう';
+  // 1行目＝判定、2行目＝点数やひとこと（15回目：変な位置で改行されないよう2行に分けた）
+  let [main, sub] = ok ? ['○ 正解！', `+${gained}点`] : ['△ おしい！', '勢いはそのまま、つぎいこう'];
   if (q.type === 'reason') {
-    v.textContent = ok ? `○ できた！ +${gained}点`
-      : response === 'close' ? '△ おしい！ コンボはそのまま。要点をもう一度読んでおこう'
-        : '△ まだ → にがて問題に入れたよ。つぎいこう';
+    [main, sub] = ok ? ['○ できた！', `+${gained}点`]
+      : response === 'close' ? ['△ おしい！', 'コンボはそのまま。要点をもう一度読んでおこう']
+        : ['△ まだ', 'にがて問題に入れたよ。つぎいこう'];
   }
+  v.replaceChildren(el('span', 'v-main', main), el('span', 'v-sub', sub));
   if (ok && lastBonus) v.append(el('span', 'bonus', `（タイムボーナス +${lastBonus}）`));
   $('btn-hint').hidden = true;
   const sol = $('solution');
@@ -636,7 +638,7 @@ function showFeedback(q, ok, gained, response) {
   $('btn-next').append(el('kbd', '', 'Enter'));
   $('btn-next').focus({ preventScroll: true });
   fb.scrollIntoView({ block: 'nearest', behavior: store.settings.motion === 'low' ? 'auto' : 'smooth' });
-  $('live').textContent = `${v.textContent}。${sol.textContent}。${q.explanation}`;
+  $('live').textContent = `${main} ${sub}${ok && lastBonus ? `（タイムボーナス +${lastBonus}）` : ''}。${sol.textContent}。${q.explanation}`;
 }
 
 function restartAnim(node, cls, ms) {
