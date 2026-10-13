@@ -35,7 +35,6 @@ let qIndex = 0;
 // リベンジ問題（16回目）：wrongs＝その回でまちがえた問題、revenge＝20問のあとのリベンジの状態（なければ null）
 let wrongs = [];
 let revenge = null;
-let weakAtStart = null; // 17回目：ホームに戻ったとき、この回の にがて問題 の変化を取り消すため
 let pausedAt = 0; // 17回目：確認を出している間はタイムボーナスの時間を止める
 const curQ = () => (revenge ? revenge.list[revenge.i] : session[qIndex]);
 let run = newRun();
@@ -293,7 +292,6 @@ async function startUnit(u, reviewMode = false) {
   qIndex = 0;
   wrongs = [];
   revenge = null;
-  weakAtStart = JSON.parse(JSON.stringify(store.weak || {}));
   run = newRun();
   setStage(0);
   audio.start();
@@ -317,7 +315,9 @@ function updateHud() {
   $('hud-score').textContent = `${run.score + (revenge ? revenge.points : 0)}点`;
   $('meter-fill').style.width = `${Math.round(stageProgress(run.correct, difficulty()) * 100)}%`;
   const c = $('hud-combo');
-  c.textContent = run.combo >= 2 ? `${run.combo}コンボ` : '';
+  // 18回目：コンボの場所だと分かるよう、0〜1 のときも薄い色で「0コンボ」「1コンボ」を出す。2コンボ以上は今までどおり金色
+  c.textContent = `${run.combo}コンボ`;
+  c.classList.toggle('idle', run.combo < 2);
 }
 
 // ---------- 問題の表示 ----------
@@ -957,8 +957,8 @@ $('btn-next').addEventListener('click', next);
 $('btn-again').addEventListener('click', () => startUnit(units.find((u) => u.id === unit.id), $('btn-again').dataset.review === '1'));
 $('btn-home').addEventListener('click', renderTitle);
 
-// 17回目：問題画面の「ホームに戻る」。確認してから戻る。戻ったらこの回は記録しない
-// （ベスト記録・累計は結果画面でしか記録しないので何もしない。にがて問題は、この回で増えた・減った分を元に戻す）
+// 17回目：問題画面の「ホームに戻る」。確認してから戻る。戻ったら点数・ベスト記録・累計は記録しない（結果画面でしか記録しないので何もしない）。
+// 18回目：にがて問題は、答えるたびに記録したとおり残す（篤さん「残したい」）。まちがえた問題は にがて問題 に入ったまま
 const quitDlg = $('quit-dialog');
 function resumePlay() {
   if (quitDlg.open) quitDlg.close();
@@ -979,7 +979,6 @@ $('btn-quit-yes').addEventListener('click', () => {
   quitDlg.close();
   pausedAt = 0;
   clearTimeout(timebarTimer);
-  if (weakAtStart) store.weak = weakAtStart;
   save(store);
   revenge = null;
   renderTitle();

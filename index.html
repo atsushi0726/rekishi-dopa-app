@@ -40,17 +40,13 @@
       <div class="title-buttons">
         <button class="btn" id="btn-settings" type="button">⚙ 設定</button>
       </div>
-      <!-- 17回目：一文ごとに改行・左寄せ（文言は篤さん確認済み） -->
+      <!-- 18回目：文言は篤さんの原文のまま。「〇」が項目の頭、〇の無い行は直前の項目の続き（〇の幅だけ字下げ） -->
       <div class="notes" id="notes">
-        <p>このアプリは無料です。</p>
-        <p>解説は、覚えるための短いまとめです。</p>
-        <p>くわしくは教科書で確かめましょう。</p>
-        <p>記録は、この端末の中だけに保存されます。</p>
-        <p>遊んだ記録や点数は、どこにも送りません。</p>
-        <p>アプリのファイルは GitHub から読み込みます。</p>
-        <p>通信量は、はじめて開いたときに約0.5MBです。</p>
-        <p>そのあとは端末に保存されるので、電波がなくても遊べます。</p>
-        <p>アプリが更新されたときだけ、変わった分を少し読み込みます。</p>
+        <p>〇このアプリはテスト中です。無料で使用可能です。</p>
+        <p>〇解説は、覚えるための短いまとめです。詳しくは教科書で確かめましょう。</p>
+        <p>〇記録は、この端末の中だけに保存されます。遊んだ記録や点数は、どこにも送りません。</p>
+        <p>〇通信量は、はじめて開いたときに約0.4MBが必要です。<br>その後は端末に保存されるので、電波がなくても通信不要で遊べます。</p>
+        <p>〇アプリが更新されたときだけ、また約0.4MBを読み込みます。</p>
       </div>
     </section>
 
@@ -134,7 +130,7 @@
 
   <!-- 17回目：ホームに戻る前の確認 -->
   <dialog id="quit-dialog" aria-labelledby="quit-msg">
-    <p class="quit-msg" id="quit-msg">ここでやめて、ホームに戻りますか？<br>（この回の記録は残りません）</p>
+    <p class="quit-msg" id="quit-msg">ここでやめて、ホームに戻りますか？<br><span class="quit-note">（点数とベスト記録は残りません。<br>まちがえた問題は、にがて問題に残ります）</span></p>
     <div class="quit-buttons">
       <button class="btn" id="btn-quit-yes" type="button">ホームに戻る</button>
       <button class="btn primary" id="btn-quit-no" type="button">つづける</button>

@@ -110,10 +110,10 @@ html { scroll-padding-bottom: calc(var(--dock-h) + 12px + env(safe-area-inset-bo
 .logo small { font-size: 0.35em; color: var(--muted); }
 /* 17回目：サブタイトル。折り返さない大きさ（360px でも1行） */
 .subtitle { margin: 0 0 4px; text-align: center; white-space: nowrap; font-weight: 700; color: var(--ink); font-size: clamp(0.95rem, 4.6vw, 1.3rem); letter-spacing: 0.04em; }
-/* 17回目：一番下の説明。一文ごとに改行・左寄せ */
-.notes { max-width: 30em; margin: 0 auto; font-size: clamp(0.75rem, 3.2vw, 0.85rem); color: var(--muted); line-height: 1.6; } /* 360px でもいちばん長い文が1行に入る大きさ（12px 以上） */
-@media (max-width: 400px) { .notes { margin: 0 -8px; letter-spacing: -0.03em; } } /* いちばん長い文（29文字）も 360px で1行に */
-.notes p { margin: 0; text-align: left; }
+/* 18回目：一番下の説明。「設定」ボタンから約60px（3行ぶん）下げる。左寄せ・ぶら下げインデント：
+   「〇」で始まる行が項目の頭、続きの行と折り返した行は「〇」の幅（1文字＝1em）だけ字下げしてそろえる */
+.notes { max-width: 30em; margin: 60px auto 0; font-size: clamp(0.75rem, 3.2vw, 0.85rem); color: var(--muted); line-height: 1.6; }
+.notes p { margin: 0 0 4px; text-align: left; padding-left: 1em; text-indent: -1em; }
 .tagline { text-align: center; color: var(--muted); line-height: 1.7; }
 .units-head { font-size: 1rem; color: var(--muted); text-align: center; margin: 24px 0 8px; font-weight: 700; }
 .units { display: grid; gap: 12px; margin: 0 0 24px; }
@@ -184,10 +184,13 @@ kbd {
 .quit-btn:focus-visible { outline: none; }
 .quit-btn:focus-visible .quit-pill { outline: 3px solid var(--gold); outline-offset: 2px; }
 .quit-msg { margin: 0 0 16px; font-size: clamp(0.9rem, 4.4vw, 1.05rem); font-weight: 700; line-height: 1.6; text-align: center; }
+.quit-note { display: inline-block; margin-top: 4px; font-size: 0.85em; font-weight: 400; line-height: 1.5; } /* 18回目：区切りのよい所で改行し、変な位置で折り返さない大きさに */
 .quit-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 .quit-buttons .btn { min-height: 48px; }
 .hud-combo { min-width: 4.5em; text-align: right; color: var(--gold); font-weight: 700; }
 .hud-combo.pop { animation: pop 0.35s; }
+/* 18回目：0〜1コンボは薄い落ち着いた色（背景に対して 3:1 以上）。2コンボ以上で金色に変わる。位置と幅は同じ */
+.hud-combo.idle { color: var(--muted); font-weight: 400; }
 @keyframes pop { 50% { transform: scale(1.5); } }
 
 /* ---- 問題カード ---- */
