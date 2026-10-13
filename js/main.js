@@ -3,7 +3,7 @@ import {
   STAGES, MAX_STAGE, SESSION_LENGTH, stageProgress, grade, newRun, applyAnswer, applySelfCheck, SELF_CHECKS,
   buildSession, buildReviewSession, shuffle, shuffleNotIdentity, orderMarks, matchMarks,
   moodFor, comboTier, comboShout, rankFor,
-  DIFFICULTIES, buildWeightedSession, reduceChoices, hintFor, timeBonus, TIME_LIMIT_MS, recordKey,
+  DIFFICULTIES, sessionFor, reduceChoices, hintFor, timeBonus, TIME_LIMIT_MS, recordKey,
 } from './game.js';
 import { OUTFITS, emptyStats, addPlay, unlockedOutfits, newOutfits, titleFor, evolutionFor, EVOLUTIONS } from './rewards.js';
 import { validateUnit } from './validate.js';
@@ -271,7 +271,7 @@ async function startUnit(u, reviewMode = false) {
   session = review ? buildReviewSession(unit.questions, store.weak[unit.id], SESSION_LENGTH) : [];
   if (!session.length) {
     review = false;
-    session = buildWeightedSession(unit.questions, SESSION_LENGTH, DIFFICULTIES[difficulty()].mix);
+    session = sessionFor(unit.questions, difficulty());
   }
   // かんたん：4択の誤答を1つ減らして3択に
   if (DIFFICULTIES[difficulty()].choices === 3) session = session.map((q) => reduceChoices(q));
@@ -627,7 +627,8 @@ function showFeedback(q, ok, gained, response) {
     for (const p of q.pairs) ul.appendChild(el('li', '', `${p.left} → ${p.right}`));
     sol.appendChild(ul);
   }
-  $('explanation').textContent = q.explanation;
+  // 15回目：要点だけの短い説明であることを、解説の頭の小さな札で示す
+  $('explanation').replaceChildren(el('span', 'expl-tag', '簡単解説'), q.explanation);
   $('btn-submit').hidden = true;
   const fb = $('feedback');
   fb.hidden = false;

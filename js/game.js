@@ -237,8 +237,10 @@ export const DIFFICULTIES = {
   easy: { name: 'かんたん', note: '3択・ヒントあり・4択が多め・まつりに届きやすい', choices: 3, hint: true,
     mix: { choice: 0.65, order: 0.15, match: 0.15, reason: 0.05 }, timeBonus: false },
   normal: { name: 'ふつう', note: '4択・いろいろな形式', choices: 4, hint: false, mix: null, timeBonus: false },
+  // むずかしい（15回目に変更）：形式の数を先に決める割合（mix）をやめ、形式の重み（typeWeight）で選ぶ。
+  // 割合で決めると、組み合わせ（単元に5〜6問）が毎回ぜんぶ出てしまい、重要度の順も逆転したため
   hard: { name: 'むずかしい', note: '並べ替え・組み合わせ・理由を考える問いが多め・早く答えるとタイムボーナス', choices: 4, hint: false,
-    mix: { choice: 0.25, order: 0.3, match: 0.3, reason: 0.15 }, timeBonus: true },
+    mix: null, typeWeight: { choice: 1, order: 1.8, match: 1.8, reason: 1.8 }, timeBonus: true },
 };
 
 // 出題頻度の重要度（9回目に「1問ごとの重み」に変更）。A の問題ほど1問あたり出やすくする（docs/IMPORTANCE.md）
@@ -268,11 +270,15 @@ function quotas(share, n, rng = Math.random) {
 // 1問ごとの重みで、重複なしに n 問を選ぶ（Efraimidis–Spirakis：rng^(1/重み) の大きい順）。
 // 形式の数は、mix（難易度の割合）があればそれに、なければ問題全体の形式の比率に合わせて先に決め、
 // 各形式の中で重みの大きい順に取る。足りない形式は、ほかの問題から重みの大きい順に埋める
-export function buildWeightedSession(questions, n = SESSION_LENGTH, mix = null, rng = Math.random) {
+export function buildWeightedSession(questions, n = SESSION_LENGTH, mix = null, rng = Math.random, typeWeight = null) {
   const total = Math.min(n, questions.length);
+  // typeWeight（15回目・むずかしい）：形式の数は先に決めず、1問ごとの重み＝重要度の重み×形式の重みで選ぶ。
+  // 形式の重みを2未満にしておくと、どの形式でも A の問題＞B の問題＞C の問題 の順に出やすい（重みが逆転しない）
+  const w = (q) => (IMPORTANCE_WEIGHT[q.importance] || 1) * (typeWeight ? typeWeight[q.type] || 1 : 1);
   const keyed = questions
-    .map((q) => ({ q, key: rng() ** (1 / (IMPORTANCE_WEIGHT[q.importance] || 1)) }))
+    .map((q) => ({ q, key: rng() ** (1 / w(q)) }))
     .sort((a, b) => b.key - a.key);
+  if (typeWeight) return buildSession(keyed.slice(0, total).map((k) => k.q), total, rng);
   let share = mix;
   if (!share) {
     share = {};
@@ -298,6 +304,12 @@ export function reduceChoices(q, rng = Math.random) {
   const drop = wrong[Math.floor(rng() * wrong.length)];
   const keep = q.choices.map((_, i) => i).filter((i) => i !== drop);
   return { ...q, choices: keep.map((i) => q.choices[i]), answer: keep.indexOf(q.answer) };
+}
+
+// 難易度に合わせた20問（main.js とテストで同じ選び方を使う）
+export function sessionFor(questions, difficulty = 'normal', rng = Math.random, n = SESSION_LENGTH) {
+  const d = DIFFICULTIES[difficulty] || DIFFICULTIES.normal;
+  return buildWeightedSession(questions, n, d.mix, rng, d.typeWeight || null);
 }
 
 // かんたんのヒント。問題データの中身だけから作る（新しい事実は足さない）

@@ -12,6 +12,7 @@
   --ng: #d1495b;
   --radius: 16px;
   --shake: 6px;
+  --dock-h: 134px; /* 下の帯の高さ（15回目）。まきまるが跳ねても帯の中に収まる高さ */
   font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Yu Gothic", "Meiryo", "Noto Sans JP", system-ui, sans-serif;
 }
 
@@ -85,8 +86,21 @@ body[data-motion="low"] .lantern { animation: none; }
 /* ---- 画面 ---- */
 #app {
   max-width: 720px; margin: 0 auto; min-height: 100%;
-  padding: 52px 16px calc(120px + env(safe-area-inset-bottom));
+  padding: 52px 16px calc(var(--dock-h) + 24px + env(safe-area-inset-bottom));
 }
+/* 自動でスクロールするとき（解説を出す・フォーカスを移す）、下の帯に隠れない所で止める */
+html { scroll-padding-bottom: calc(var(--dock-h) + 12px + env(safe-area-inset-bottom)); }
+
+/* ---- 下の帯（15回目）：まきまる・吹き出し・大きな文字の置き場 ----
+   画面の下に固定し、中身（問題・選択肢・解説・ボタン）はこの帯より上に見える。帯は不透明なので、
+   スクロール中に中身が帯の下を通っても、まきまるたちと重なって見えることはない */
+#dock {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; pointer-events: none;
+  height: calc(var(--dock-h) + env(safe-area-inset-bottom));
+  background: var(--bg1); border-top: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 -6px 14px rgba(0, 0, 0, 0.3); transition: background 0.8s;
+}
+.dock-inner { position: relative; max-width: 720px; height: var(--dock-h); margin: 0 auto; }
 .screen { display: none; }
 .screen.active { display: block; animation: fadein 0.3s; }
 @keyframes fadein { from { opacity: 0; transform: translateY(8px); } }
@@ -220,6 +234,11 @@ kbd {
 .solution { font-weight: 700; margin-bottom: 8px; line-height: 1.7; }
 .solution ol { margin: 0; padding-left: 1.4em; }
 .explanation { line-height: 1.7; margin: 0 0 14px; }
+/* 解説の頭の小さな札（15回目）：要点だけの短い説明で、網羅的ではないことを示す */
+.expl-tag {
+  display: inline-block; margin-right: 6px; padding: 0 7px; border-radius: 6px; vertical-align: 1px;
+  font-size: 0.75rem; font-weight: 700; line-height: 1.6; color: #6b5a3e; background: #f1e6cf; border: 1px solid #d9c49a;
+}
 #btn-next { width: 100%; }
 
 .card.bump { animation: bump 0.35s; }
@@ -286,7 +305,7 @@ body[data-motion="low"] .stage-badge, body[data-motion="low"] .result-best { ani
 
 /* ---- マスコット ---- */
 #mascot {
-  position: fixed; right: 8px; bottom: calc(8px + env(safe-area-inset-bottom)); width: 88px; z-index: 4;
+  position: absolute; right: 8px; bottom: 6px; width: 88px; z-index: 1;
   pointer-events: none; transform-origin: 50% 100%;
 }
 #mascot svg { width: 100%; height: auto; display: block; overflow: visible; }
@@ -350,21 +369,23 @@ body[data-motion="low"] #mascot, body[data-motion="low"] #mascot * { animation: 
 @keyframes wave { to { transform: rotate(30deg); } }
 @keyframes wave-r { to { transform: rotate(-30deg); } }
 
-/* まきまるのひとこと（吹き出し）。画面の右下、カードの外 */
+/* まきまるのひとこと（吹き出し）。下の帯の中、まきまるの左横（15回目） */
 #mascot-say {
-  position: fixed; right: 6px; bottom: calc(118px + env(safe-area-inset-bottom)); z-index: 4; max-width: 150px;
+  position: absolute; right: 108px; bottom: 10px; z-index: 2; max-width: min(240px, calc(100% - 124px));
   background: #fff; color: var(--card-ink); font-weight: 800; font-size: 0.85rem; line-height: 1.3;
   padding: 4px 10px; border-radius: 12px; border: 3px solid #3b2414; pointer-events: none;
   opacity: 0; transform: translateY(6px); transition: opacity 0.2s, transform 0.2s;
 }
 #mascot-say::after {
-  content: ""; position: absolute; right: 36px; bottom: -14px; border: 7px solid transparent; border-top-color: #3b2414;
+  content: ""; position: absolute; right: -16px; bottom: 10px; border: 7px solid transparent; border-left-color: #3b2414;
 }
 #mascot-say.show { opacity: 1; transform: none; }
 
 @media (min-width: 900px) {
-  #mascot { width: 130px; right: 24px; bottom: 24px; }
-  #mascot-say { right: 24px; bottom: 200px; }
+  :root { --dock-h: 196px; }
+  #mascot { width: 130px; right: 24px; bottom: 10px; }
+  #mascot-say { right: 168px; bottom: 28px; max-width: 320px; }
+  .shout { right: 168px; }
 }
 
 /* ---- 設定 ---- */
@@ -436,17 +457,18 @@ input[type="radio"], input[type="checkbox"] { transform: scale(1.3); margin-righ
 }
 @keyframes score-pop { from { transform: translateY(10px) scale(0.6); opacity: 0; } 12% { transform: translateY(-6px) scale(1.15); opacity: 1; } 75% { transform: translateY(-24px); opacity: 1; } to { transform: translateY(-40px); opacity: 0; } }
 
-/* 大きな文字（画面上部の HUD の位置に短く。カードには重ねない） */
+/* 大きな文字（15回目から下の帯の中に短く。問題・選択肢・解説には重ねない。帯の幅に収まる大きさ） */
 .shout {
-  position: fixed; left: 8%; right: 8%; top: 8px; z-index: 6; text-align: center; pointer-events: none;
-  font-size: clamp(2rem, 11vw, 3.2rem); font-weight: 900; color: #fff; letter-spacing: 0.05em;
-  -webkit-text-stroke: 2px #7a102c; text-shadow: 0 4px 0 #7a102c, 0 0 18px #ffb703;
+  position: absolute; left: 8px; right: 104px; top: 8px; z-index: 3; text-align: center; pointer-events: none;
+  font-size: clamp(1.8rem, 9vw, 3.2rem); font-weight: 900; color: #fff; letter-spacing: 0.05em;
+  /* 15回目：太い赤茶の縁取りと金色の光をやめ、白い文字＋黒い影だけに（細い文字の白が縁取りに食われて赤く見え、読みにくかった） */
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55), 0 0 6px rgba(0, 0, 0, 0.45);
   opacity: 0;
 }
 .shout { white-space: pre-line; }
 .shout.on { animation: shout var(--shout-ms, 1.9s) ease-out forwards; }
-.shout.tier3, .shout.tier4 { color: #fff3b0; }
-.shout.stage { font-size: clamp(1.4rem, 7vw, 2.2rem); background: linear-gradient(90deg, transparent, rgba(44, 51, 90, 0.94) 12%, rgba(44, 51, 90, 0.94) 88%, transparent); padding: 10px 0; -webkit-text-stroke: 0; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 14px rgba(255, 183, 3, 0.8); }
+.shout.tier3, .shout.tier4 { color: #ffe9a8; } /* 10コンボ以上は淡いクリーム色（目立たせすぎない） */
+.shout.stage { font-size: clamp(1.05rem, 5.2vw, 2.2rem); line-height: 1.25; background: linear-gradient(90deg, transparent, rgba(44, 51, 90, 0.94) 12%, rgba(44, 51, 90, 0.94) 88%, transparent); padding: 5px 0; -webkit-text-stroke: 0; text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4), 0 0 14px rgba(255, 183, 3, 0.8); }
 @keyframes shout { 0% { transform: scale(0.3); opacity: 0; } 10% { transform: scale(1.15); opacity: 1; } 18% { transform: scale(1); } 88% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
 
 /* フラッシュ（薄く、一瞬だけ） */
