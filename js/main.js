@@ -35,6 +35,8 @@ let qIndex = 0;
 // リベンジ問題（16回目）：wrongs＝その回でまちがえた問題、revenge＝20問のあとのリベンジの状態（なければ null）
 let wrongs = [];
 let revenge = null;
+let weakAtStart = null; // 17回目：ホームに戻ったとき、この回の にがて問題 の変化を取り消すため
+let pausedAt = 0; // 17回目：確認を出している間はタイムボーナスの時間を止める
 const curQ = () => (revenge ? revenge.list[revenge.i] : session[qIndex]);
 let run = newRun();
 let current = null; // 表示中の問題の状態
@@ -291,6 +293,7 @@ async function startUnit(u, reviewMode = false) {
   qIndex = 0;
   wrongs = [];
   revenge = null;
+  weakAtStart = JSON.parse(JSON.stringify(store.weak || {}));
   run = newRun();
   setStage(0);
   audio.start();
@@ -313,7 +316,6 @@ function updateHud() {
     : `${Math.min(qIndex + 1, session.length)} / ${session.length}`;
   $('hud-score').textContent = `${run.score + (revenge ? revenge.points : 0)}点`;
   $('meter-fill').style.width = `${Math.round(stageProgress(run.correct, difficulty()) * 100)}%`;
-  $('meter-name').textContent = `${run.stage}. ${stageName(run.stage)}`;
   const c = $('hud-combo');
   c.textContent = run.combo >= 2 ? `${run.combo}コンボ` : '';
 }
@@ -380,6 +382,34 @@ function startTimebar(type) {
   fill.style.width = '0%';
   clearTimeout(timebarTimer);
   timebarTimer = setTimeout(() => bar.classList.add('over'), TIME_LIMIT_MS[type]);
+}
+
+// 17回目：ホームに戻る確認を出している間は、タイムボーナスの時間を止める（考える時間を取られないように）。
+// つづけるを押すと、止めた所から残りの時間で再開する
+function pauseTimebar() {
+  pausedAt = 0;
+  if ($('timebar').hidden || answered) return;
+  pausedAt = performance.now();
+  stopTimebar();
+}
+function resumeTimebar() {
+  if (!pausedAt) return;
+  const now = performance.now();
+  qStart += now - pausedAt;
+  pausedAt = 0;
+  const limit = TIME_LIMIT_MS[curQ().type];
+  const left = limit - (now - qStart);
+  const bar = $('timebar');
+  const fill = $('timebar-fill');
+  if (left <= 0) {
+    bar.classList.add('over');
+    return;
+  }
+  void fill.offsetWidth;
+  fill.style.transition = `width ${left}ms linear`;
+  fill.style.width = '0%';
+  clearTimeout(timebarTimer);
+  timebarTimer = setTimeout(() => bar.classList.add('over'), left);
 }
 
 function stopTimebar() {
@@ -926,6 +956,34 @@ $('btn-hint').addEventListener('click', showHint);
 $('btn-next').addEventListener('click', next);
 $('btn-again').addEventListener('click', () => startUnit(units.find((u) => u.id === unit.id), $('btn-again').dataset.review === '1'));
 $('btn-home').addEventListener('click', renderTitle);
+
+// 17回目：問題画面の「ホームに戻る」。確認してから戻る。戻ったらこの回は記録しない
+// （ベスト記録・累計は結果画面でしか記録しないので何もしない。にがて問題は、この回で増えた・減った分を元に戻す）
+const quitDlg = $('quit-dialog');
+function resumePlay() {
+  if (quitDlg.open) quitDlg.close();
+  resumeTimebar();
+}
+$('btn-quit').addEventListener('click', () => {
+  if (quitDlg.open) return;
+  pauseTimebar();
+  quitDlg.showModal();
+  $('btn-quit-no').focus();
+});
+$('btn-quit-no').addEventListener('click', resumePlay);
+quitDlg.addEventListener('cancel', (e) => {
+  e.preventDefault();
+  resumePlay();
+});
+$('btn-quit-yes').addEventListener('click', () => {
+  quitDlg.close();
+  pausedAt = 0;
+  clearTimeout(timebarTimer);
+  if (weakAtStart) store.weak = weakAtStart;
+  save(store);
+  revenge = null;
+  renderTitle();
+});
 $('btn-review-now').addEventListener('click', () => startUnit(units.find((u) => u.id === unit.id), true));
 $('btn-mute').addEventListener('click', () => {
   store.settings.muted = !store.settings.muted;
@@ -949,7 +1007,7 @@ dlg.addEventListener('change', () => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (dlg.open || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (dlg.open || $('quit-dialog').open || e.ctrlKey || e.metaKey || e.altKey) return;
   const playing = $('screen-play').classList.contains('active');
   if (e.key === 'm' || e.key === 'M') {
     store.settings.muted = !store.settings.muted;

@@ -20,6 +20,7 @@
     <!-- タイトル -->
     <section id="screen-title" class="screen active">
       <h1 class="logo"><span>ドパ</span>・日本史</h1>
+      <p class="subtitle" id="subtitle">安土桃山時代～日露戦争</p>
       <p class="tagline">正解するほど、どんどんお祭り！<br>中学社会・歴史の学習ゲーム</p>
       <section class="difficulty" aria-label="むずかしさ">
         <h2 class="units-head">むずかしさ</h2>
@@ -39,8 +40,18 @@
       <div class="title-buttons">
         <button class="btn" id="btn-settings" type="button">⚙ 設定</button>
       </div>
-      <p class="note">解説は、覚えるための短いまとめです。くわしくは教科書で確かめよう。</p>
-      <p class="note">記録はこの端末の中だけに保存されます。外部への送信はしません。</p>
+      <!-- 17回目：一文ごとに改行・左寄せ（文言は篤さん確認済み） -->
+      <div class="notes" id="notes">
+        <p>このアプリは無料です。</p>
+        <p>解説は、覚えるための短いまとめです。</p>
+        <p>くわしくは教科書で確かめましょう。</p>
+        <p>記録は、この端末の中だけに保存されます。</p>
+        <p>遊んだ記録や点数は、どこにも送りません。</p>
+        <p>アプリのファイルは GitHub から読み込みます。</p>
+        <p>通信量は、はじめて開いたときに約0.5MBです。</p>
+        <p>そのあとは端末に保存されるので、電波がなくても遊べます。</p>
+        <p>アプリが更新されたときだけ、変わった分を少し読み込みます。</p>
+      </div>
     </section>
 
     <!-- プレイ -->
@@ -54,8 +65,9 @@
         </div>
         <div class="meter" aria-label="盛り上がりメーター">
           <div class="meter-bar"><div id="meter-fill"></div></div>
-          <span id="meter-name" class="meter-name"></span>
           <span id="hud-combo" class="hud-combo"></span>
+          <!-- 17回目：段階の文字（「2. ざわざわ」など）を消し、ホームに戻るボタンを置いた -->
+          <button id="btn-quit" class="quit-btn" type="button"><span class="quit-pill">ホームに戻る</span></button>
         </div>
       </header>
       <div id="festival-banner" class="festival-banner" aria-hidden="true">大江戸まつり！</div>
@@ -119,6 +131,15 @@
   </div>
   <div id="flash" aria-hidden="true"></div>
   <div id="live" class="sr-only" aria-live="polite"></div>
+
+  <!-- 17回目：ホームに戻る前の確認 -->
+  <dialog id="quit-dialog" aria-labelledby="quit-msg">
+    <p class="quit-msg" id="quit-msg">ここでやめて、ホームに戻りますか？<br>（この回の記録は残りません）</p>
+    <div class="quit-buttons">
+      <button class="btn" id="btn-quit-yes" type="button">ホームに戻る</button>
+      <button class="btn primary" id="btn-quit-no" type="button">つづける</button>
+    </div>
+  </dialog>
 
   <dialog id="settings">
     <form method="dialog">

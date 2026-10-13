@@ -108,6 +108,12 @@ html { scroll-padding-bottom: calc(var(--dock-h) + 12px + env(safe-area-inset-bo
 .logo { font-size: clamp(2.4rem, 11vw, 3.6rem); margin: 0.4em 0 0.1em; text-align: center; letter-spacing: 0.05em; }
 .logo span { color: var(--gold); }
 .logo small { font-size: 0.35em; color: var(--muted); }
+/* 17回目：サブタイトル。折り返さない大きさ（360px でも1行） */
+.subtitle { margin: 0 0 4px; text-align: center; white-space: nowrap; font-weight: 700; color: var(--ink); font-size: clamp(0.95rem, 4.6vw, 1.3rem); letter-spacing: 0.04em; }
+/* 17回目：一番下の説明。一文ごとに改行・左寄せ */
+.notes { max-width: 30em; margin: 0 auto; font-size: clamp(0.75rem, 3.2vw, 0.85rem); color: var(--muted); line-height: 1.6; } /* 360px でもいちばん長い文が1行に入る大きさ（12px 以上） */
+@media (max-width: 400px) { .notes { margin: 0 -8px; letter-spacing: -0.03em; } } /* いちばん長い文（29文字）も 360px で1行に */
+.notes p { margin: 0; text-align: left; }
 .tagline { text-align: center; color: var(--muted); line-height: 1.7; }
 .units-head { font-size: 1rem; color: var(--muted); text-align: center; margin: 24px 0 8px; font-weight: 700; }
 .units { display: grid; gap: 12px; margin: 0 0 24px; }
@@ -157,14 +163,29 @@ kbd {
 .icon-btn { font-size: 1.3rem; background: none; border: 0; cursor: pointer; padding: 4px; color: inherit; }
 /* 音のボタン（16回目）：背景のないボタンなので、箱を 44px 四方に広げても見た目は変わらない。広げたぶんは外側の余白で打ち消す */
 .icon-btn { min-width: 44px; min-height: 44px; margin: -6px -6px -6px 0; display: inline-grid; place-items: center; }
-.meter { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 0.85rem; }
+.meter { display: flex; align-items: center; gap: 8px; margin-top: 20px; font-size: 0.85rem; } /* 17回目：上の音のボタンとホームに戻るの押せる範囲の間を 8px 以上あける */
 .meter-bar { flex: 1; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.2); overflow: hidden; }
 #meter-fill {
   height: 100%; width: 0; border-radius: 6px;
   background: linear-gradient(90deg, var(--gold), var(--accent));
   transition: width 0.4s cubic-bezier(.3, 1.6, .5, 1);
 }
-.meter-name { font-weight: 700; min-width: 6.5em; text-align: right; }
+/* 17回目：段階の文字を消し、ホームに戻るボタンを置いた（バーは縮む）。
+   ボタン本体は高さ 44px の透明な箱（＝押せる範囲）、見た目の丸い枠（高さ32px）は中の .quit-pill で描く */
+.quit-btn {
+  flex: none; display: inline-grid; place-items: center; min-height: 44px; min-width: 44px; padding: 0 2px; margin: -6px 0 -6px 4px;
+  font: inherit; background: none; border: 0; cursor: pointer; color: var(--ink);
+}
+.quit-pill {
+  display: inline-flex; align-items: center; height: 32px; padding: 0 12px; white-space: nowrap;
+  font-size: 0.8rem; font-weight: 700; background: rgba(255, 255, 255, 0.12); border: 2px solid rgba(255, 255, 255, 0.55); border-radius: 999px;
+}
+.quit-btn:active .quit-pill { transform: translateY(1px); }
+.quit-btn:focus-visible { outline: none; }
+.quit-btn:focus-visible .quit-pill { outline: 3px solid var(--gold); outline-offset: 2px; }
+.quit-msg { margin: 0 0 16px; font-size: clamp(0.9rem, 4.4vw, 1.05rem); font-weight: 700; line-height: 1.6; text-align: center; }
+.quit-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.quit-buttons .btn { min-height: 48px; }
 .hud-combo { min-width: 4.5em; text-align: right; color: var(--gold); font-weight: 700; }
 .hud-combo.pop { animation: pop 0.35s; }
 @keyframes pop { 50% { transform: scale(1.5); } }
