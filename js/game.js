@@ -167,7 +167,13 @@ export function buildSession(questions, n = SESSION_LENGTH, rng = Math.random) {
       if (j !== -1) [picked[i], picked[j]] = [picked[j], picked[i]];
     }
   }
-  return placeReasonsAfterAnswers(picked);
+  return placeReasonsAfterAnswers(placeFiguresLast(picked));
+}
+
+// 資料つきの問題（20回目②）は、その回のほかの問題のあとに出す。
+// 資料（年表・表・史料）には、ほかの問題の答え（人物・年・できごと）が書いてあることが多いので、先に見せないため
+function placeFiguresLast(list) {
+  return list.filter((q) => !q.figure).concat(list.filter((q) => q.figure));
 }
 
 // 理由・目的の問いの問題文が、4択の正解の語を言ってしまう組（例：「徴兵令を出した目的」と「…法令は？」の答え「徴兵令」）。

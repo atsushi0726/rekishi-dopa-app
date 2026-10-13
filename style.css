@@ -201,6 +201,19 @@ kbd {
 .qtype { margin: 0; font-size: 0.8rem; color: #8a6d3b; font-weight: 700; }
 .prompt { font-size: 1.2rem; line-height: 1.6; margin: 6px 0 14px; }
 .opts { display: grid; gap: 10px; }
+
+/* ---- 資料（20回目②）：史料の文章・表・図。問題文の下、選択肢の上 ---- */
+.q-figure { margin: 0 0 14px; padding: 10px 12px; background: #fbf6ea; border: 1px solid #d9c9a8; border-radius: 10px; color: var(--card-ink); }
+.q-figure .fig-title { font-size: 0.85rem; font-weight: 700; color: #5a4632; margin: 0 0 6px; }
+.fig-text p { margin: 0 0 6px; font-size: 0.95rem; line-height: 1.7; padding-left: 1.2em; text-indent: -1.2em; } /* 「一」で始まる行のぶら下げ */
+.fig-text p:last-child { margin-bottom: 0; }
+.fig-table-wrap { overflow-x: auto; } /* 表がはみ出すときは表の中だけで横に動かす（ページは横にはみ出さない） */
+.fig-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; line-height: 1.5; }
+.fig-table th, .fig-table td { border: 1px solid #d9c9a8; padding: 5px 6px; text-align: left; vertical-align: top; }
+.fig-table thead th { background: #efe4cc; }
+.fig-table tbody th { background: #f6eedc; white-space: nowrap; }
+.fig-img { display: block; width: 100%; max-width: 480px; height: auto; margin: 0 auto; background: #fff; border-radius: 6px; }
+.fig-credit { margin: 6px 0 0; font-size: 0.75rem; line-height: 1.5; color: #6b5a45; }
 .opt {
   display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
   font: inherit; font-size: 1.05rem; color: var(--card-ink);

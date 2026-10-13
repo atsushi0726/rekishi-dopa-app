@@ -337,7 +337,8 @@ function optButton(num, text, onClick) {
 function renderQuestion() {
   answered = false;
   const q = curQ();
-  const label = q.type === 'choice' ? `${q.choices.length}択` : TYPE_LABEL[q.type]; // かんたんは「3択」
+  // かんたんは「3択」。資料つき（20回目②）は「4択・資料」
+  const label = q.type === 'choice' ? `${q.choices.length}択${q.figure ? '・資料' : ''}` : TYPE_LABEL[q.type];
   $('qtype').textContent = revenge ? `リベンジ ${revenge.i + 1}/${revenge.list.length}　${label}` : `第${qIndex + 1}問　${label}`;
   $('prompt').textContent = q.prompt;
   $('feedback').hidden = true;
@@ -348,6 +349,7 @@ function renderQuestion() {
   const submit = $('btn-submit');
   submit.hidden = q.type === 'choice' || q.type === 'reason'; // 理由・目的の問いは自己採点のボタンで答える
   submit.disabled = true;
+  if (q.figure) area.appendChild(renderFigure(q.figure));
   if (q.type === 'choice') renderChoice(q, area);
   else if (q.type === 'order') renderOrder(q, area);
   else if (q.type === 'reason') renderReason(q, area);
@@ -421,6 +423,49 @@ function stopTimebar() {
   const fill = $('timebar-fill');
   fill.style.width = getComputedStyle(fill).width;
   fill.style.transition = 'none';
+}
+
+// 資料（20回目②）：問題文の下、選択肢の上に出す。史料の文章・表・図のどれか。下に出典
+function renderFigure(f) {
+  const fig = el('figure', `q-figure kind-${f.kind}`);
+  fig.append(el('figcaption', 'fig-title', f.title));
+  if (f.kind === 'text') {
+    const box = el('div', 'fig-text');
+    for (const line of f.lines) box.append(el('p', '', line));
+    fig.append(box);
+  } else if (f.kind === 'table') {
+    const wrap = el('div', 'fig-table-wrap');
+    const table = el('table', 'fig-table');
+    const head = el('tr');
+    for (const h of f.head) {
+      const th = el('th', '', h);
+      th.scope = 'col';
+      head.append(th);
+    }
+    const tbody = el('tbody');
+    for (const r of f.rows) {
+      const tr = el('tr');
+      r.forEach((c, i) => {
+        const cell = el(i === 0 ? 'th' : 'td', '', c); // いちばん左の列は行の見出し
+        if (i === 0) cell.scope = 'row';
+        tr.append(cell);
+      });
+      tbody.append(tr);
+    }
+    const thead = el('thead');
+    thead.append(head);
+    table.append(thead, tbody);
+    wrap.append(table);
+    fig.append(wrap);
+  } else {
+    const img = el('img', 'fig-img');
+    img.src = f.src; // app/ の中の相対パス（サブパスでも動く）
+    img.alt = f.alt;
+    img.decoding = 'async';
+    fig.append(img);
+  }
+  fig.append(el('p', 'fig-credit', `出典：${f.credit}`));
+  return fig;
 }
 
 function renderChoice(q, area) {
